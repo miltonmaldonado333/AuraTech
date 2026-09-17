@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Project identifiers -->
+    <groupId>com.auratech</groupId>
+    <artifactId>auratech</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <!-- UTF-8 encoding to prevent console character issues -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        
+        <!-- Java compiler version -->
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        
+        <!-- Main application entry point -->
+        <exec.mainClass>com.auratech.Main</exec.mainClass>
+    </properties>
+
+    <dependencies>
+        <!-- The system must persist data in files managed by the application itself.
+             Add external dependencies (e.g., Gson) here only if JSON serialization is used later. -->
+    </dependencies>
+</project>
