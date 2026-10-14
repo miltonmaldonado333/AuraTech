@@ -1,24 +1,38 @@
 package com.creatinaboys.service;
 
 import com.creatinaboys.model.Athlete;
-import com.creatinaboys.repository.AthleteRepository;
+import com.creatinaboys.model.Basketballer;
+import com.creatinaboys.model.Footballer;
+import com.creatinaboys.repository.IAthleteRepository;
+
 import java.util.List;
 
 public class AthleteService {
-    private AthleteRepository repository;
-    private BillingService billingService;
 
-    public AthleteService(AthleteRepository repository, BillingService billingService) {
+    private final IAthleteRepository repository;
+    private final IBillingService billingService;
+
+    public AthleteService(IAthleteRepository repository, IBillingService billingService) {
         this.repository = repository;
         this.billingService = billingService;
     }
 
-    public boolean registerAthlete(Athlete athlete) {
-        return repository.register(athlete);
+    public boolean registerFootballer(String id, String fullName, int age, String phone, int jerseyNumber, String playingPosition) {
+        Footballer footballer = new Footballer(id, fullName, age, phone, jerseyNumber, playingPosition);
+        footballer.setCategory(billingService.determineCategory(age));
+        footballer.setMonthlyFee(billingService.calculateFee(age));
+        return repository.save(footballer);
+    }
+
+    public boolean registerBasketballer(String id, String fullName, int age, String phone, int jerseyNumber, double height) {
+        Basketballer basketballer = new Basketballer(id, fullName, age, phone, jerseyNumber, height);
+        basketballer.setCategory(billingService.determineCategory(age));
+        basketballer.setMonthlyFee(billingService.calculateFee(age));
+        return repository.save(basketballer);
     }
 
     public Athlete findAthlete(String id) {
-        return repository.find(id);
+        return repository.findById(id);
     }
 
     public List<Athlete> getAllAthletes() {
@@ -26,6 +40,22 @@ public class AthleteService {
     }
 
     public boolean deleteAthlete(String id) {
-        return repository.delete(id);
+        return repository.deleteById(id);
+    }
+
+    public int getTotalAthletesCount() {
+        return repository.findAll().size();
+    }
+
+    public long getFootballersCount() {
+        return repository.findAll().stream()
+                .filter(a -> a instanceof Footballer)
+                .count();
+    }
+
+    public long getBasketballersCount() {
+        return repository.findAll().stream()
+                .filter(a -> a instanceof Basketballer)
+                .count();
     }
 }
