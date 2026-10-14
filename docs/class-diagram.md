@@ -1,47 +1,106 @@
-\\\mermaid
+````mermaid
 classDiagram
-class Athlete {
-<<abstract>> - String id - String fullName - int age - String phone - CategoryEnum category - double monthlyFee + calculateCategoryAndFee()\*
-}
+    namespace com.creatinaboys.model {
+        class CategoryEnum {
+            <<enumeration>>
+            CHILDREN
+            YOUTH
+            ADULTS
+        }
 
-    class Footballer {
-        - String position
-        - String preferredFoot
-        + calculateCategoryAndFee()
+        class Athlete {
+            <<abstract>>
+            #String id
+            #String fullName
+            #int age
+            #String phone
+            #int jerseyNumber
+            #double monthlyFee
+            #CategoryEnum category
+            +Athlete(id, fullName, age, phone, jerseyNumber)
+            +getId() String
+            +getFullName() String
+            +getAge() int
+            +getPhone() String
+            +getJerseyNumber() int
+            +getMonthlyFee() double
+            +getCategory() CategoryEnum
+            +calculateFee()* void
+        }
+
+        class Footballer {
+            -String playingPosition
+            +Footballer(id, fullName, age, phone, jerseyNumber, playingPosition)
+            +getPlayingPosition() String
+            +calculateFee() void
+        }
+
+        class Basketballer {
+            -double height
+            +Basketballer(id, fullName, age, phone, jerseyNumber, height)
+            +getHeight() double
+            +calculateFee() void
+        }
     }
 
-    class Basketballer {
-        - double heightCm
-        - String primaryRole
-        + calculateCategoryAndFee()
+    namespace com.creatinaboys.repository {
+        class AthleteRepository {
+            -List~Athlete~ athleteList
+            +register(Athlete a) boolean
+            +find(String id) Athlete
+            +findAll() List~Athlete~
+            +delete(String id) boolean
+            +update(Athlete a) boolean
+        }
     }
 
-    class CategoryEnum {
-        <<enumeration>>
-        CHILDREN
-        YOUTH
-        ADULT
+    namespace com.creatinaboys.service {
+        class BillingService {
+            +calculateFee(int age) double
+            +determineCategory(int age) CategoryEnum
+        }
+
+        class AthleteService {
+            -AthleteRepository repository
+            -BillingService billingService
+            +AthleteService(AthleteRepository repo, BillingService billing)
+            +registerFootballer(...) boolean
+            +registerBasketballer(...) boolean
+            +findAthlete(String id) Athlete
+            +getAll() List~Athlete~
+            +deleteAthlete(String id) boolean
+        }
     }
 
-    class AthleteRepository {
-        <<interface>>
-        + save(Athlete athlete)
-        + findById(String id) Athlete
-        + findAll() List~Athlete~
-        + update(Athlete athlete)
-        + delete(String id)
+    namespace com.creatinaboys.ui {
+        class PrincipalFrame {
+            +main(String[] args) void
+            +openRegisterForm() void
+            +openConsultForm() void
+        }
+        class AthleteRegisterFrame {
+            -AthleteService service
+            +btnSaveActionPerformed() void
+            +clearFields() void
+        }
+        class AthleteConsultFrame {
+            -AthleteService service
+            +loadTable() void
+            +btnSearchActionPerformed() void
+            +btnDeleteActionPerformed() void
+        }
     }
 
-    class AthleteService {
-        - AthleteRepository athleteRepository
-        + registerAthlete(Athlete athlete)
-        + getAllAthletes() List~Athlete~
-        + getAthletesByDiscipline(String discipline) List~Athlete~
-    }
-
-    Athlete <|-- Footballer
-    Athlete <|-- Basketballer
-    Athlete --> CategoryEnum
-    AthleteService --> AthleteRepository
-
-\\\
+    %% Relationships
+    Athlete <|-- Footballer : Inheritance
+    Athlete <|-- Basketballer : Inheritance
+    Athlete --> CategoryEnum : uses
+    AthleteRepository "1" o-- "*" Athlete : contains
+    AthleteService --> AthleteRepository : uses
+    AthleteService --> BillingService : uses
+    AthleteRegisterFrame --> AthleteService : invokes
+    AthleteConsultFrame --> AthleteService : invokes
+    PrincipalFrame --> AthleteRegisterFrame : opens
+    PrincipalFrame --> AthleteConsultFrame : opens
+    ```
+````
