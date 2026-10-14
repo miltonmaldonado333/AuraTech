@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -8,8 +9,8 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>Creatina-Boys Management System</name>
-    <description>3-Tier Java Desktop Application for Creatina-Boys Sports Club</description>
+    <name>AuraTech</name>
+    <description>Creatina-Boys Sports Club Management System</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -28,6 +29,7 @@
 
     <build>
         <plugins>
+            <!-- Plugin de compilación para Java 17 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -35,6 +37,16 @@
                 <configuration>
                     <source>17</source>
                     <target>17</target>
+                </configuration>
+            </plugin>
+            
+            <!-- Plugin de ejecución para iniciar NetBeans (Main class) -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>com.creatinaboys.Main</mainClass>
                 </configuration>
             </plugin>
         </plugins>
