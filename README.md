@@ -1,22 +1,26 @@
-# Creatina-Boys Sports Club Management System
+# Sistema de Gesti�n del Club Deportivo Creatina-Boys
 
-A 3-tier Java desktop application built with Apache Maven and Java Swing for managing athletes, discipline categorization, age-based fee evaluation, and monthly subscription payments at **Creatina-Boys Sports Club**.
-
----
-
-## Features
-
-- **Athlete Management (CRUD):** Register, update, view, and delete athletes.
-- **Discipline Assignment:** Specialized attributes for Footballers and Basketballers.
-- **Automated Age Categorization:** Automatic classification and monthly fee calculation based on age:
-  - **Children (5-12 years):** $50,000 COP
-  - **Youth (13-17 years):** \,000 COP
-  - **Adults (18+ years):** $100,000 COP
-- **3-Tier Architecture:** Complete decoupling between UI (\com.creatinaboys.Ui\), Business Logic (\com.creatinaboys.service\), and Data Access (\com.creatinaboys.Repository\).
+Una aplicaci�n de escritorio en Java estructurada bajo una **Arquitectura de 4 Capas** construida con Apache Maven y Java Swing para la gesti�n de deportistas, asignaci�n de disciplinas, evaluaci�n de tarifas por edad y pago de mensualidades en el **Club Deportivo Creatina-Boys**.
 
 ---
 
-## Project Structure
+## Caracter�sticas
+
+- **Gesti�n de Deportistas (CRUD):** Registrar, actualizar, consultar y eliminar deportistas.
+- **Asignaci�n de Disciplina:** Atributos espec�ficos para Futbolistas (posici�n de juego) y Basquetbolistas (estatura).
+- **Categorizaci�n Autom�tica por Edad:** Clasificaci�n y c�lculo autom�tico de la tarifa mensual seg�n la edad:
+  - **Ni�os (5-12 a�os):** $50.000 COP
+  - **J�venes (13-17 a�os):** \.000 COP
+  - **Adultos (18+ a�os):** $100.000 COP
+- **Arquitectura de 4 Capas:** Desacoplamiento total entre:
+  1. **Capa de Presentaci�n / UI:** \com.creatinaboys.Ui\ (Formularios e interfaz Swing).
+  2. **Capa de Servicios / L�gica:** \com.creatinaboys.service\ (Reglas de negocio y tarifas).
+  3. **Capa de Repositorio / Persistencia:** \com.creatinaboys.Repository\ (Acceso a datos y archivos).
+  4. **Capa de Modelo / Dominio:** \com.creatinaboys.model\ (Entidades y objetos del sistema).
+
+---
+
+## Estructura del Proyecto
 
 \\\ ext
 AuraTech/
@@ -46,50 +50,50 @@ AuraTech/
 
 ---
 
-## Prerequisites & Installation
+## Requisitos Previos e Instalaci�n
 
-1. **JDK 17** or higher installed.
-2. **Apache Maven 3.8+** installed.
-3. Clone the repository:
+1. **JDK 17** o superior instalado.
+2. **Apache Maven 3.8+** instalado.
+3. Clonar el repositorio:
    \\\ash
    git clone https://github.com/miltonmaldonado333/AuraTech.git
    cd AuraTech
    \\\
-4. Build and run the application:
+4. Compilar y ejecutar la aplicaci�n:
    \\\ash
    mvn clean compile
    mvn exec:java -Dexec.mainClass="com.creatinaboys.Main"
    \\\
    "@
 
-# 6. Crear docs/analysis.md
+# 2. Actualizar docs/analysis.md en espa�ol (4 Capas)
 
 Set-Content -Path "docs\analysis.md" -Value @"
 
-# Project Requirements & Analysis Document
+# Documento de Requerimientos y An�lisis del Proyecto
 
-## 1. Problem Statement
+## 1. Planteamiento del Problema
 
-Creatina-Boys Sports Club currently tracks athlete memberships, discipline enrollments (Football & Basketball), and monthly dues manually. This leads to improper age categorization, inconsistent fee billing, and lack of consolidated reporting.
+El Club Deportivo Creatina-Boys actualmente lleva el control de membres�as de atletas, inscripciones por disciplina (F�tbol y Baloncesto) y cobros mensuales de forma manual. Esto genera una asignaci�n incorrecta de categor�as por edad, inconsistencias en el cobro de tarifas y falta de reportes consolidados.
 
-## 2. Business Rules (Pricing Matrix)
+## 2. Reglas de Negocio (Matriz de Tarifas)
 
-| Category     | Age Range     | Monthly Fee (COP) |
-| :----------- | :------------ | :---------------- |
-| **Children** | 5 � 12 years  | 50,000 COP        |
-| **Youth**    | 13 � 17 years | $70,000 COP       |
-| **Adults**   | 18+ years     | 110,000 COP       |
+| Categor�a   | Rango de Edad | Tarifa Mensual (COP) |
+| :---------- | :------------ | :------------------- |
+| **Ni�os**   | 5 � 12 a�os   | \.000 COP            |
+| **J�venes** | 13 � 17 a�os  | $70.000 COP          |
+| **Adultos** | 18+ a�os      | \.000 COP            |
 
-## 3. Functional Requirements (FR)
+## 3. Requerimientos Funcionales (RF)
 
-- **FR1 - Athlete Enrollment:** The system must allow creating, reading, updating, and deleting athlete records (ID, Full Name, Age, Phone).
-- **FR2 - Discipline Assignment:** The system must allow assigning athletes to Football or Basketball, capturing sport-specific attributes (e.g., Playing Position for Football, Height for Basketball).
-- **FR3 - Automated Age Evaluation:** The system must automatically determine the athlete's age category and assign the corresponding monthly subscription fee.
-- **FR4 - Dues Management:** The system must track monthly payment statuses and display summary tables.
+- **RF1 - Inscripci�n de Deportistas:** El sistema debe permitir crear, consultar, actualizar y eliminar registros de deportistas (Identificaci�n, Nombre Completo, Edad, Tel�fono).
+- **RF2 - Asignaci�n de Disciplina:** El sistema debe permitir asignar deportistas a F�tbol o Baloncesto, capturando atributos espec�ficos de cada deporte (ej. Posici�n de Juego en F�tbol, Estatura en Baloncesto).
+- **RF3 - Evaluaci�n Autom�tica de Edad:** El sistema debe determinar autom�ticamente la categor�a de edad del deportista y asignar la tarifa de suscripci�n mensual correspondiente.
+- **RF4 - Gesti�n de Cobros:** El sistema debe realizar el seguimiento del estado de pago de las mensualidades y mostrar tablas de resumen.
 
-## 4. Non-Functional Requirements (NFR)
+## 4. Requerimientos No Funcionales (RNF)
 
-- **NFR1 - Platform:** Developed in Java (JDK 17) using Maven build orchestration.
-- **NFR2 - User Interface:** Built using Java Swing (\JFrame\, \JTable\, \JOptionPane\) inside \com.creatinaboys.Ui\.
-- **NFR3 - Architecture:** Strict adherence to 3-Tier Architecture (\Ui\, \service\, \Repository\).
-- **NFR4 - Exception Handling:** Custom domain exceptions for data validation and repository errors.
+- **RNF1 - Plataforma:** Desarrollado en Java (JDK 17) utilizando Apache Maven para la gesti�n de construcci�n.
+- **RNF2 - Interfaz de Usuario:** Construida usando Java Swing (\JFrame\, \JTable\, \JOptionPane\) dentro del paquete \com.creatinaboys.Ui\.
+- **RNF3 - Arquitectura de Software:** Estricto cumplimiento de la **Arquitectura de 4 Capas** (\Ui\, \service\, \Repository\, \model\).
+- **RNF4 - Manejo de Excepciones:** Excepciones personalizadas del dominio para la validaci�n de datos y errores de repositorio.
