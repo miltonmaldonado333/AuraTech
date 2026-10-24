@@ -54,7 +54,7 @@ public class FileAthleteRepository implements IAthleteRepository {
         return findAll().stream()
                 .filter(a -> a.getId().equals(id))
                 .findFirst()
-                .orElseThrow(() -> new AthleteNotFoundException("Athlete not found with ID: " + id));
+                .orElseThrow(() -> new AthleteNotFoundException(id));
     }
 
     @Override
