@@ -1,23 +1,26 @@
-````mermaid
+# Class Diagram
+
+```mermaid
 classDiagram
-    namespace com.creatinaboys.model {
+    namespace model {
         class CategoryEnum {
             <<enumeration>>
             CHILDREN
             YOUTH
             ADULTS
+            -String name
+            +getName() String
         }
-
         class Athlete {
             <<abstract>>
-            #String id
-            #String fullName
-            #int age
-            #String phone
-            #int jerseyNumber
-            #double monthlyFee
-            #CategoryEnum category
-            +Athlete(id, fullName, age, phone, jerseyNumber)
+            -String id
+            -String fullName
+            -int age
+            -String phone
+            -int jerseyNumber
+            -double monthlyFee
+            -CategoryEnum category
+            #Athlete(id, fullName, age, phone, jerseyNumber)
             +getId() String
             +getFullName() String
             +getAge() int
@@ -25,82 +28,132 @@ classDiagram
             +getJerseyNumber() int
             +getMonthlyFee() double
             +getCategory() CategoryEnum
-            +calculateFee()* void
+            +calculateFee(IBillingService)* void
+            +getDiscipline()* String
         }
-
         class Footballer {
             -String playingPosition
             +Footballer(id, fullName, age, phone, jerseyNumber, playingPosition)
             +getPlayingPosition() String
-            +calculateFee() void
+            +setPlayingPosition(String) void
+            +calculateFee(IBillingService) void
+            +getDiscipline() String
         }
-
         class Basketballer {
             -double height
             +Basketballer(id, fullName, age, phone, jerseyNumber, height)
             +getHeight() double
-            +calculateFee() void
+            +setHeight(double) void
+            +calculateFee(IBillingService) void
+            +getDiscipline() String
         }
     }
 
-    namespace com.creatinaboys.repository {
+    namespace exceptions {
+        class AthleteNotFoundException {
+            -String searchedId
+            +AthleteNotFoundException(String searchedId)
+            +getSearchedId() String
+        }
+        class InvalidAgeException {
+            -int enteredAge
+            +InvalidAgeException(int enteredAge)
+            +getEnteredAge() int
+        }
+    }
+
+    namespace repository {
+        class IAthleteRepository {
+            <<interface>>
+            +save(Athlete) boolean
+            +findById(String) Athlete
+            +findAll() List~Athlete~
+            +deleteById(String) boolean
+            +update(Athlete) boolean
+        }
         class AthleteRepository {
             -List~Athlete~ athleteList
-            +register(Athlete a) boolean
-            +find(String id) Athlete
+            +save(Athlete) boolean
+            +findById(String) Athlete
             +findAll() List~Athlete~
-            +delete(String id) boolean
-            +update(Athlete a) boolean
+            +deleteById(String) boolean
+            +update(Athlete) boolean
         }
     }
 
-    namespace com.creatinaboys.service {
+    namespace service {
+        class IBillingService {
+            <<interface>>
+            +calculateFee(int age) double
+            +determineCategory(int age) CategoryEnum
+        }
         class BillingService {
             +calculateFee(int age) double
             +determineCategory(int age) CategoryEnum
         }
-
         class AthleteService {
-            -AthleteRepository repository
-            -BillingService billingService
-            +AthleteService(AthleteRepository repo, BillingService billing)
+            -IAthleteRepository repository
+            -IBillingService billingService
+            +AthleteService(IAthleteRepository, IBillingService)
             +registerFootballer(...) boolean
             +registerBasketballer(...) boolean
             +findAthlete(String id) Athlete
-            +getAll() List~Athlete~
+            +getAllAthletes() List~Athlete~
             +deleteAthlete(String id) boolean
+            +getTotalAthletesCount() int
+            +getFootballersCount() long
+            +getBasketballersCount() long
         }
     }
 
-    namespace com.creatinaboys.ui {
+    namespace ui {
         class PrincipalFrame {
-            +main(String[] args) void
+            -JButton btnRegister
+            -JButton btnConsult
             +openRegisterForm() void
             +openConsultForm() void
         }
         class AthleteRegisterFrame {
             -AthleteService service
+            -JTextField txtId
+            -JTextField txtFullName
+            -JTextField txtAge
+            -JTextField txtPhone
+            -JTextField txtJerseyNumber
+            -JComboBox cmbDiscipline
+            -JTextField txtPlayingPosition
+            -JTextField txtHeight
+            -JButton btnSave
+            -JButton btnClear
             +btnSaveActionPerformed() void
             +clearFields() void
         }
         class AthleteConsultFrame {
             -AthleteService service
+            -JTable tblAthletes
+            -DefaultTableModel tableModel
+            -JTextField txtSearchId
+            -JButton btnSearch
+            -JButton btnDelete
             +loadTable() void
             +btnSearchActionPerformed() void
             +btnDeleteActionPerformed() void
         }
     }
 
-    %% Relationships
-    Athlete <|-- Footballer : Inheritance
-    Athlete <|-- Basketballer : Inheritance
-    Athlete --> CategoryEnum : uses
-    AthleteRepository "1" o-- "*" Athlete : contains
-    AthleteService --> AthleteRepository : uses
-    AthleteService --> BillingService : uses
-    AthleteRegisterFrame --> AthleteService : invokes
-    AthleteConsultFrame --> AthleteService : invokes
+    Athlete <|-- Footballer : extends
+    Athlete <|-- Basketballer : extends
+    Athlete --> CategoryEnum : has
+    Athlete ..> IBillingService : uses
+    IAthleteRepository <|.. AthleteRepository : implements
+    IBillingService <|.. BillingService : implements
+    AthleteRepository "1" o-- "*" Athlete : stores
+    AthleteService --> IAthleteRepository : uses
+    AthleteService --> IBillingService : uses
+    AthleteRepository ..> AthleteNotFoundException : throws
+    BillingService ..> InvalidAgeException : throws
     PrincipalFrame --> AthleteRegisterFrame : opens
     PrincipalFrame --> AthleteConsultFrame : opens
-    ```
-````
+    AthleteRegisterFrame --> AthleteService : invokes
+    AthleteConsultFrame --> AthleteService : invokes
+```
