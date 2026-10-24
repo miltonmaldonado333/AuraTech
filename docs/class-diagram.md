@@ -2,6 +2,7 @@
 
 ```mermaid
 classDiagram
+    direction TB
     namespace model {
         class CategoryEnum {
             <<enumeration>>
@@ -33,7 +34,6 @@ classDiagram
         }
         class Footballer {
             -String playingPosition
-            +Footballer(id, fullName, age, phone, jerseyNumber, playingPosition)
             +getPlayingPosition() String
             +setPlayingPosition(String) void
             +calculateFee(IBillingService) void
@@ -41,7 +41,6 @@ classDiagram
         }
         class Basketballer {
             -double height
-            +Basketballer(id, fullName, age, phone, jerseyNumber, height)
             +getHeight() double
             +setHeight(double) void
             +calculateFee(IBillingService) void
@@ -52,13 +51,16 @@ classDiagram
     namespace exceptions {
         class AthleteNotFoundException {
             -String searchedId
-            +AthleteNotFoundException(String searchedId)
             +getSearchedId() String
         }
         class InvalidAgeException {
             -int enteredAge
-            +InvalidAgeException(int enteredAge)
             +getEnteredAge() int
+        }
+        class PersistenceException {
+            <<unchecked>>
+            +PersistenceException(String message)
+            +PersistenceException(String message, Throwable cause)
         }
     }
 
@@ -73,11 +75,33 @@ classDiagram
         }
         class AthleteRepository {
             -List~Athlete~ athleteList
-            +save(Athlete) boolean
-            +findById(String) Athlete
-            +findAll() List~Athlete~
-            +deleteById(String) boolean
-            +update(Athlete) boolean
+            -indexOf(String) int
+        }
+        class FileAthleteRepository {
+            -String filePath
+            -AthleteParserRegistry parsers
+            -saveAll(List~Athlete~) void
+            -toLine(Athlete) String
+            -parseLine(String) Athlete
+        }
+        class AthleteParser {
+            <<interface>>
+            +getType() String
+            +toTextLine(Athlete) String
+            +fromTextFields(String[]) Athlete
+        }
+        class AthleteParserRegistry {
+            -Map~String, AthleteParser~ readerMap
+            -Map~Class, AthleteParser~ writerMap
+            +register(Class, AthleteParser) AthleteParserRegistry
+            +toTextLine(Athlete) String
+            +fromTextLine(String, String[]) Athlete
+        }
+        class FootballerParser {
+            -String TYPE = FOOTBALL
+        }
+        class BasketballerParser {
+            -String TYPE = BASKETBALL
         }
     }
 
@@ -95,49 +119,27 @@ classDiagram
             -IAthleteRepository repository
             -IBillingService billingService
             +AthleteService(IAthleteRepository, IBillingService)
-            +registerFootballer(...) boolean
-            +registerBasketballer(...) boolean
+            +registerAthlete(Athlete) boolean
             +findAthlete(String id) Athlete
             +getAllAthletes() List~Athlete~
             +deleteAthlete(String id) boolean
             +getTotalAthletesCount() int
-            +getFootballersCount() long
-            +getBasketballersCount() long
+            +getAthletesCountByType(Class~T~) long
         }
     }
 
     namespace ui {
         class PrincipalFrame {
-            -JButton btnRegister
-            -JButton btnConsult
             +openRegisterForm() void
             +openConsultForm() void
         }
         class AthleteRegisterFrame {
             -AthleteService service
-            -JTextField txtId
-            -JTextField txtFullName
-            -JTextField txtAge
-            -JTextField txtPhone
-            -JTextField txtJerseyNumber
-            -JComboBox cmbDiscipline
-            -JTextField txtPlayingPosition
-            -JTextField txtHeight
-            -JButton btnSave
-            -JButton btnClear
-            +btnSaveActionPerformed() void
             +clearFields() void
         }
         class AthleteConsultFrame {
             -AthleteService service
-            -JTable tblAthletes
-            -DefaultTableModel tableModel
-            -JTextField txtSearchId
-            -JButton btnSearch
-            -JButton btnDelete
             +loadTable() void
-            +btnSearchActionPerformed() void
-            +btnDeleteActionPerformed() void
         }
     }
 
@@ -146,11 +148,21 @@ classDiagram
     Athlete --> CategoryEnum : has
     Athlete ..> IBillingService : uses
     IAthleteRepository <|.. AthleteRepository : implements
+    IAthleteRepository <|.. FileAthleteRepository : implements
+    AthleteParser <|.. FootballerParser : implements
+    AthleteParser <|.. BasketballerParser : implements
     IBillingService <|.. BillingService : implements
     AthleteRepository "1" o-- "*" Athlete : stores
+    FileAthleteRepository --> AthleteParserRegistry : uses
+    AthleteParserRegistry "1" o-- "*" AthleteParser : registers
+    FootballerParser ..> Footballer : creates
+    BasketballerParser ..> Basketballer : creates
+    FootballerParser ..> PersistenceException : throws
+    BasketballerParser ..> PersistenceException : throws
     AthleteService --> IAthleteRepository : uses
     AthleteService --> IBillingService : uses
     AthleteRepository ..> AthleteNotFoundException : throws
+    FileAthleteRepository ..> AthleteNotFoundException : throws
     BillingService ..> InvalidAgeException : throws
     PrincipalFrame --> AthleteRegisterFrame : opens
     PrincipalFrame --> AthleteConsultFrame : opens

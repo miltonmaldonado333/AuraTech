@@ -15,6 +15,13 @@ flowchart TB
     subgraph REPO["com.creatinaboys.repository (Repository Layer)"]
         IAthleteRepository
         AthleteRepository
+        FileAthleteRepository
+        subgraph PARSER["com.creatinaboys.repository.parser"]
+            AthleteParser
+            AthleteParserRegistry
+            FootballerParser
+            BasketballerParser
+        end
     end
     subgraph MODEL["com.creatinaboys.model (Model Layer)"]
         Athlete
@@ -25,6 +32,7 @@ flowchart TB
     subgraph EXC["com.creatinaboys.exceptions (cross-cutting)"]
         AthleteNotFoundException
         InvalidAgeException
+        PersistenceException
     end
 
     UI -->|invokes| SVC
