@@ -1,5 +1,6 @@
 package com.creatinaboys.model;
 
+import com.creatinaboys.exceptions.InvalidAgeException;
 import com.creatinaboys.service.IBillingService;
 
 /** Athlete enrolled in the football discipline. */
@@ -12,7 +13,7 @@ public class Footballer extends Athlete {
     }
 
     @Override
-    public void calculateFee(IBillingService billingService) {
+    public void calculateFee(IBillingService billingService) throws InvalidAgeException {
         setCategory(billingService.determineCategory(getAge()));
         setMonthlyFee(billingService.calculateFee(getAge()));
     }

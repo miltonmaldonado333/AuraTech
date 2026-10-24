@@ -1,5 +1,6 @@
 package com.creatinaboys.model;
 
+import com.creatinaboys.exceptions.InvalidAgeException;
 import com.creatinaboys.service.IBillingService;
 
 /**
@@ -27,10 +28,19 @@ public abstract class Athlete {
         this.jerseyNumber = jerseyNumber;
     }
 
-    public abstract void calculateFee(IBillingService billingService);
+    /**
+     * Assigns the category and the monthly fee of the athlete. The pricing
+     * rules are not here: they are delegated to the billing abstraction (DIP),
+     * whose expert is BillingService (GRASP Information Expert). Each
+     * discipline overrides it (polymorphism).
+     * @param billingService
+     * @throws com.creatinaboys.exceptions.InvalidAgeException
+     */
+    public abstract void calculateFee(IBillingService billingService) throws InvalidAgeException;
 
     /**
      * Name of the sports discipline (e.g. "Football", "Basketball").
+     * @return 
      */
     public abstract String getDiscipline();
 

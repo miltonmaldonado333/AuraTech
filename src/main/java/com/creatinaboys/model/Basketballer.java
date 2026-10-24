@@ -1,5 +1,6 @@
 package com.creatinaboys.model;
 
+import com.creatinaboys.exceptions.InvalidAgeException;
 import com.creatinaboys.service.IBillingService;
 
 /** Athlete enrolled in the basketball discipline. Height is expressed in meters. */
@@ -12,14 +13,14 @@ public class Basketballer extends Athlete {
     }
 
     private static double requireValidHeight(double height) {
-        if (height <= 0 || height > 4.0) {
-            throw new IllegalArgumentException("height must be between 0 and 4.0 meters.");
+        if (height <= 0 || height > 2.5) {
+            throw new IllegalArgumentException("height must be between 0 and 2.5 meters.");
         }
         return height;
     }
 
     @Override
-    public void calculateFee(IBillingService billingService) {
+    public void calculateFee(IBillingService billingService) throws InvalidAgeException {
         setCategory(billingService.determineCategory(getAge()));
         setMonthlyFee(billingService.calculateFee(getAge()));
     }
