@@ -16,12 +16,10 @@ flowchart TB
         IAthleteRepository
         AthleteRepository
         FileAthleteRepository
-        subgraph PARSER["com.creatinaboys.repository.parser"]
-            AthleteParser
-            AthleteParserRegistry
-            FootballerParser
-            BasketballerParser
-        end
+        AthleteParser
+        AthleteParserRegistry
+        FootballerParser
+        BasketballerParser
     end
     subgraph MODEL["com.creatinaboys.model (Model Layer)"]
         Athlete
