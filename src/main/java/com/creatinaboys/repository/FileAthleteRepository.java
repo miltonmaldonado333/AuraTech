@@ -4,9 +4,6 @@ import com.creatinaboys.exceptions.AthleteNotFoundException;
 import com.creatinaboys.model.Athlete;
 import com.creatinaboys.model.Basketballer;
 import com.creatinaboys.model.Footballer;
-import com.creatinaboys.repository.parser.BasketballerParser;
-import com.creatinaboys.repository.parser.AthleteParserRegistry;
-import com.creatinaboys.repository.parser.FootballerParser;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

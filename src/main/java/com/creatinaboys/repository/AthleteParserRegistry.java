@@ -1,4 +1,4 @@
-package com.creatinaboys.repository.parser;
+package com.creatinaboys.repository;
 
 import com.creatinaboys.model.Athlete;
 import java.util.HashMap;

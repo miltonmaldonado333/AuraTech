@@ -1,4 +1,4 @@
-package com.creatinaboys.repository.parser;
+package com.creatinaboys.repository;
 
 import com.creatinaboys.exceptions.PersistenceException;
 import com.creatinaboys.model.Athlete;
