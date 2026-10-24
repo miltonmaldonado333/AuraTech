@@ -20,7 +20,6 @@ public class BillingService implements IBillingService {
 
     @Override
     public double calculateFee(int age) throws InvalidAgeException {
-        // En lugar de repetir las condiciones, reutilizas determineCategory
         CategoryEnum category = determineCategory(age);
 
         return switch (category) {
