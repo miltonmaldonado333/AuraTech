@@ -1,7 +1,9 @@
 package com.creatinaboys.ui;
 
+import com.creatinaboys.service.MembershipExpirationPolicy;
 import com.creatinaboys.service.AthleteService;
 import com.creatinaboys.service.ISaleService;
+import com.creatinaboys.ui.components.BrandHeader;
 import com.creatinaboys.ui.components.SidebarButton;
 import com.creatinaboys.ui.panels.AthleteListPanel;
 import com.creatinaboys.ui.panels.AthleteRegisterPanel;
@@ -54,11 +56,7 @@ public class PrincipalFrames extends JFrame {
         sidebar.setPreferredSize(new Dimension(240, 0));
 
         // Logo / Header
-        JLabel lblLogo = new JLabel("CREATINA-BOYS", SwingConstants.CENTER);
-        lblLogo.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblLogo.setForeground(Color.WHITE);
-        lblLogo.setBorder(new EmptyBorder(25, 10, 25, 10));
-        sidebar.add(lblLogo, BorderLayout.NORTH);
+        sidebar.add(new BrandHeader(), BorderLayout.NORTH);
 
         // Menú Opciones
         JPanel menuPanel = new JPanel(new GridLayout(9, 1, 0, 5));
@@ -80,6 +78,12 @@ public class PrincipalFrames extends JFrame {
             btn.addActionListener(e -> {
                 selectSidebarButton(btn);
                 if ("DEPORTISTAS".equals(cardName) && athleteListPanel != null) {
+                    // Recalcula el estado (Activo/Inactivo) antes de mostrar la tabla.
+                    // Cambia esta regla por la que necesites:
+                    //   a -> true                 -> todos activos
+                    //   a -> a.getAge() > 10      -> prueba de insignia roja
+                    //   a -> paymentService...    -> cuando exista el módulo de Pagos
+                    athleteService.applyActivationPolicy(new MembershipExpirationPolicy(5));
                     athleteListPanel.loadAthleteData();
                 }
                 cardLayout.show(mainContentPanel, cardName);
@@ -93,10 +97,15 @@ public class PrincipalFrames extends JFrame {
 
         sidebar.add(menuPanel, BorderLayout.CENTER);
 
-        // Botón Cerrar Sesión
+        // Botón Cerrar Sesión (con margen)
         SidebarButton btnLogout = new SidebarButton("Cerrar Sesión");
         btnLogout.addActionListener(e -> System.exit(0));
-        sidebar.add(btnLogout, BorderLayout.SOUTH);
+
+        JPanel logoutWrap = new JPanel(new BorderLayout());
+        logoutWrap.setOpaque(false);
+        logoutWrap.setBorder(new EmptyBorder(0, 10, 16, 10));
+        logoutWrap.add(btnLogout, BorderLayout.CENTER);
+        sidebar.add(logoutWrap, BorderLayout.SOUTH);
 
         add(sidebar, BorderLayout.WEST);
     }

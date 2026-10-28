@@ -8,6 +8,7 @@ import com.creatinaboys.model.Footballer;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -15,6 +16,9 @@ import java.util.Objects;
 public class FileAthleteRepository implements IAthleteRepository {
 
     private static final String DEFAULT_FILE_PATH = "data/athletes.txt";
+
+    /** Separa la línea del deportista de sus datos de estado: ...;@activo|manual|venceEl */
+    private static final String EXTRAS_MARK = ";@";
 
     private final Path path;
     private final AthleteParserRegistry parsers;
@@ -115,13 +119,58 @@ public class FileAthleteRepository implements IAthleteRepository {
     private void saveAll(List<Athlete> athletes) {
         List<String> lines = new ArrayList<>(athletes.size());
         for (Athlete athlete : athletes) {
-            lines.add(parsers.toTextLine(athlete));
+            lines.add(toLine(athlete));
         }
         FileStorage.writeLines(path, lines);
     }
 
+    // ------------------------------------------------------------------ Serialización
+
+    /** Línea del parser + estado de la afiliación. */
+    private String toLine(Athlete athlete) {
+        return parsers.toTextLine(athlete)
+                + EXTRAS_MARK
+                + athlete.isActive() + "|"
+                + athlete.isManualOverride() + "|"
+                + athlete.getPaidUntil();
+    }
+
+    /** Separa el bloque de estado (si existe) y deja que los parsers lean la línea original. */
     private Athlete parseLine(String line) {
-        String[] fields = TextCodec.split(line, ';');
-        return parsers.fromTextLine(fields[0].trim(), fields);
+        String base = line;
+        String extras = null;
+
+        int idx = line.lastIndexOf(EXTRAS_MARK);
+        if (idx >= 0) {
+            base = line.substring(0, idx);
+            extras = line.substring(idx + EXTRAS_MARK.length());
+        }
+
+        String[] fields = TextCodec.split(base, ';');
+        Athlete athlete = parsers.fromTextLine(fields[0].trim(), fields);
+
+        if (extras != null) {
+            applyExtras(athlete, extras);
+        }
+        return athlete;
+    }
+
+    /** Líneas viejas (sin bloque) conservan los valores por defecto del modelo. */
+    private void applyExtras(Athlete athlete, String extras) {
+        String[] parts = extras.trim().split("\\|");
+        if (parts.length != 3) {
+            return;
+        }
+        try {
+            boolean active = Boolean.parseBoolean(parts[0]);
+            boolean manual = Boolean.parseBoolean(parts[1]);
+            athlete.setPaidUntil(LocalDate.parse(parts[2]));
+            athlete.setActive(active);
+            if (manual) {
+                athlete.setActiveManually(active);
+            }
+        } catch (RuntimeException e) {
+            System.err.println("Estado ignorado por formato inválido: " + extras);
+        }
     }
 }

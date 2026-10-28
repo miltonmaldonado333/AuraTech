@@ -7,10 +7,10 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
-/** Botón primario (degradado + sombra) o secundario (blanco con borde), con ícono opcional. */
+/** Botón primario (degradado azul), peligro (rojo) o secundario (blanco con borde), con ícono opcional. */
 public class ModernButton extends JButton {
 
-    public enum Style { PRIMARY, SECONDARY }
+    public enum Style { PRIMARY, SECONDARY, DANGER }
 
     private final Style style;
     private final VectorIcon icon;
@@ -19,7 +19,7 @@ public class ModernButton extends JButton {
     public ModernButton(String text, VectorIcon.Type iconType, Style style, int width) {
         super(text);
         this.style = style;
-        Color iconColor = style == Style.PRIMARY ? Color.WHITE : ThemeConstants.CANCEL_TEXT;
+        Color iconColor = style == Style.SECONDARY ? ThemeConstants.CANCEL_TEXT : Color.WHITE;
         this.icon = iconType == null ? null : new VectorIcon(iconType, 16, iconColor);
 
         setFont(ThemeConstants.FONT_BOLD);
@@ -47,22 +47,30 @@ public class ModernButton extends JButton {
         int w = getWidth(), bodyH = getHeight() - 5, off = pressed ? 1 : 0;
         Color fg;
 
-        if (style == Style.PRIMARY) {
-            if (!pressed) {
-                g2.setColor(new Color(37, 99, 235, hover ? 90 : 55));
-                g2.fillRoundRect(3, 5, w - 6, bodyH, 14, 14);
-            }
-            Color c1 = hover ? ThemeConstants.PRIMARY_HOVER : ThemeConstants.PRIMARY_BLUE;
-            Color c2 = hover ? new Color(67, 56, 202) : ThemeConstants.PRIMARY_INDIGO;
-            g2.setPaint(new GradientPaint(0, 0, c1, w, 0, c2));
-            g2.fillRoundRect(0, off, w, bodyH, 14, 14);
-            fg = Color.WHITE;
-        } else {
+        if (style == Style.SECONDARY) {
             g2.setColor(hover ? ThemeConstants.CANCEL_BG : Color.WHITE);
             g2.fillRoundRect(0, off, w, bodyH, 14, 14);
             g2.setColor(ThemeConstants.BORDER_COLOR);
             g2.drawRoundRect(0, off, w - 1, bodyH - 1, 14, 14);
             fg = ThemeConstants.CANCEL_TEXT;
+        } else {
+            Color base, c1, c2;
+            if (style == Style.PRIMARY) {
+                base = ThemeConstants.PRIMARY_BLUE;
+                c1 = hover ? ThemeConstants.PRIMARY_HOVER : ThemeConstants.PRIMARY_BLUE;
+                c2 = hover ? new Color(67, 56, 202) : ThemeConstants.PRIMARY_INDIGO;
+            } else {
+                base = ThemeConstants.DANGER_RED;
+                c1 = hover ? ThemeConstants.DANGER_HOVER : ThemeConstants.DANGER_RED;
+                c2 = hover ? new Color(159, 18, 57) : new Color(225, 29, 72);
+            }
+            if (!pressed) {
+                g2.setColor(new Color(base.getRed(), base.getGreen(), base.getBlue(), hover ? 90 : 55));
+                g2.fillRoundRect(3, 5, w - 6, bodyH, 14, 14);
+            }
+            g2.setPaint(new GradientPaint(0, 0, c1, w, 0, c2));
+            g2.fillRoundRect(0, off, w, bodyH, 14, 14);
+            fg = Color.WHITE;
         }
 
         FontMetrics fm = g2.getFontMetrics(getFont());

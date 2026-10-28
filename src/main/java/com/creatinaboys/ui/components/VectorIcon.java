@@ -8,8 +8,9 @@ import java.awt.geom.*;
 public class VectorIcon implements Icon {
 
     public enum Type {
-        HOME, USERS, USER_PLUS, TAG, TROPHY, WHISTLE, CARD, CHART, GEAR,
-        ID, USER, PHONE, HASH, BALL, CALENDAR, CHECK, CLOSE, RULER, FLAG, CHEVRON
+    HOME, USERS, USER_PLUS, TAG, TROPHY, WHISTLE, CARD, CHART, GEAR,
+    ID, USER, PHONE, HASH, BALL, CALENDAR, CHECK, CLOSE, RULER, FLAG, CHEVRON,
+    SEARCH, TRASH, LOGOUT, CHEV_LEFT, CHEV_RIGHT
     }
 
     private final Type type;
@@ -154,6 +155,24 @@ public class VectorIcon implements Icon {
                 poly(g, true, 5, 4, 19, 4, 15, 8.5, 19, 13, 5, 13);
             }
             case CHEVRON -> poly(g, false, 6, 9, 12, 15, 18, 9);
+                        case SEARCH -> {
+                g.draw(new Ellipse2D.Double(4, 4, 12, 12));
+                line(g, 14.5, 14.5, 20, 20);
+            }
+            case TRASH -> {
+                line(g, 4, 7, 20, 7);
+                poly(g, false, 9, 7, 9, 4, 15, 4, 15, 7);
+                poly(g, false, 6, 7, 7, 20, 17, 20, 18, 7);
+                line(g, 10, 11, 10, 16);
+                line(g, 14, 11, 14, 16);
+            }
+            case LOGOUT -> {
+                poly(g, false, 10, 4, 5, 4, 5, 20, 10, 20);
+                line(g, 10, 12, 20, 12);
+                poly(g, false, 16, 8, 20, 12, 16, 16);
+            }
+            case CHEV_LEFT -> poly(g, false, 15, 6, 9, 12, 15, 18);
+            case CHEV_RIGHT -> poly(g, false, 9, 6, 15, 12, 9, 18);
         }
     }
 
