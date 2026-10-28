@@ -11,12 +11,12 @@ import java.util.Optional;
 /**
  * Implementación concreta del servicio de gestión de disciplinas deportivas para el Club Deportivo Creatina-Boys.
  * <p>
- * Esta clase administra el catálogo de deportes disponibles (Fútbol, Baloncesto, etc.)[cite: 6] y garantiza
+ * Esta clase administra el catálogo de deportes disponibles (Fútbol, Baloncesto, etc.) y garantiza
  * la extensión limpia del sistema bajo las siguientes buenas prácticas:
  * </p>
  * <ul>
- *   <li><b>SRP (Single Responsibility Principle):</b> Su única función es administrar la oferta disciplinaria[cite: 6].</li>
- *   <li><b>OCP (Open/Closed Principle):</b> Permite añadir disciplinas dinámicamente sin alterar el código de la GUI[cite: 1, 6].</li>
+ *   <li><b>SRP (Single Responsibility Principle):</b> Su única función es administrar la oferta disciplinaria.</li>
+ *   <li><b>OCP (Open/Closed Principle):</b> Permite añadir disciplinas dinámicamente sin alterar el código de la GUI.</li>
  *   <li><b>Java Streams & Lambdas:</b> Búsquedas, filtrados e inspecciones utilizando la API funcional de Java.</li>
  *   <li><b>Programación Defensiva:</b> Control estricto de nulos, cadenas en blanco y colecciones inmodificables.</li>
  * </ul>
@@ -25,12 +25,13 @@ import java.util.Optional;
  * @version 1.0
  */
 public class DisciplineService implements IDisciplineService {
+    // Nota: el catálogo vive en memoria; las disciplinas agregadas en tiempo de ejecución no se guardan en archivo.
 
     /** Colección interna de disciplinas deportivas habilitadas en el club. */
     private final List<String> disciplines;
 
     /**
-     * Constructor por defecto. Carga las disciplinas base del club (Fútbol y Baloncesto)[cite: 6].
+     * Constructor por defecto. Carga las disciplinas base del club (Fútbol y Baloncesto).
      */
     public DisciplineService() {
         this.disciplines = new ArrayList<>();
