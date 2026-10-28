@@ -25,7 +25,7 @@ public interface ICoachService {
      * Registra un nuevo entrenador en el sistema.
      *
      * @param coach Entidad del entrenador a registrar.
-     * @return {@code true} si el registro fue exitoso.
+     * @return {@code true} si el registro fue exitoso; {@code false} si ya existe un entrenador con ese documento.
      * @throws PersistenceException Si ocurre un error durante la persistencia en el archivo.
      */
     boolean registerCoach(Coach coach) throws PersistenceException;
