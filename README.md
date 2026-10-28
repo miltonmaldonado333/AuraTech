@@ -32,7 +32,8 @@ Proyecto de aula — Universidad Popular del Cesar (UPC), Programación Computac
 | Servicios de atletas y facturación       | Implementado y conectado a la UI                                   |
 | Servicios de entrenadores, salud y disciplinas | Implementados, **sin pantalla** en la UI                     |
 | Pantallas Deportistas y Registrar        | Implementadas                                                      |
-| Inicio, Categorías, Disciplinas, Entrenadores, Pagos, Reportes, Configuración | Pendiente (pantallas de relleno) |
+| Categorías, Disciplinas, Entrenadores, Pagos y Reportes | Implementados |
+| Inicio                                   | Pendiente (pantalla de relleno)                                    |
 | Control de pagos (RF4)                   | Pendiente: aún no se registra el estado de pago de cada mensualidad |
 | Actualizar / eliminar deportistas desde la UI | Pendiente (el repositorio y el servicio ya lo soportan)       |
 
