@@ -16,6 +16,7 @@ import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -34,7 +35,8 @@ public class AthleteListPanel extends JPanel {
 
     private static final String STATUS_ACTIVE = "Activo";
     private static final String STATUS_INACTIVE = "Inactivo";
-    private static final int COL_STATUS = 5;
+    private static final int COL_STATUS = 6;
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private static final int PAGE_SIZE = 5;
     private static final Locale CO = Locale.forLanguageTag("es-CO");
@@ -55,7 +57,7 @@ public class AthleteListPanel extends JPanel {
 
         setLayout(new BorderLayout(0, 0));
         setBackground(ThemeConstants.MAIN_BG);
-        setBorder(new EmptyBorder(30, 32, 20, 32));
+        setBorder(new EmptyBorder(30, 24, 20, 24));
 
         add(buildHeader(), BorderLayout.NORTH);
         add(buildCard(), BorderLayout.CENTER);
@@ -132,7 +134,7 @@ public class AthleteListPanel extends JPanel {
     }
 
     private JComponent buildTable() {
-        String[] columns = {"ID", "Nombre", "Edad", "Categoría", "Disciplina", "Estado", "Tarifa (COP)"};
+        String[] columns = {"ID", "Nombre", "Edad", "Categoría", "Disciplina", "Vence", "Estado", "Tarifa (COP)"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int col) {
@@ -154,6 +156,7 @@ public class AthleteListPanel extends JPanel {
                 }
             }
         };
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);   // ahora sí, después de crear la tabla
         table.setFont(ThemeConstants.FONT_REGULAR);
         table.setRowHeight(48);
         table.setShowHorizontalLines(true);
@@ -172,7 +175,7 @@ public class AthleteListPanel extends JPanel {
             public Component getTableCellRendererComponent(JTable t, Object v, boolean sel,
                     boolean focus, int row, int col) {
                 super.getTableCellRendererComponent(t, v, sel, false, row, col);
-                setBorder(new EmptyBorder(0, 16, 0, 8));
+                setBorder(new EmptyBorder(0, 10, 0, 4));
                 setFont(sel ? ThemeConstants.FONT_BOLD : ThemeConstants.FONT_REGULAR);
                 setForeground(ThemeConstants.TEXT_MAIN);
                 setBackground(sel ? SELECTION_BG : Color.WHITE);
@@ -198,12 +201,13 @@ public class AthleteListPanel extends JPanel {
                 boolean last = col == t.getColumnCount() - 1;
                 l.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createMatteBorder(0, 0, 2, last ? 0 : 1, GRID_COLOR),
-                        new EmptyBorder(0, 16, 0, 8)));
+                        new EmptyBorder(0, 10, 0, 4)));
                 return l;
             }
         });
 
-        int[] widths = {150, 200, 80, 130, 140, 120, 130};
+        // Anchos: ID, Nombre, Edad, Categoría, Disciplina, Vence, Estado, Tarifa
+        int[] widths = {115, 170, 55, 100, 100, 105, 105, 110};
         for (int i = 0; i < widths.length; i++) {
             table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
         }
@@ -246,7 +250,10 @@ public class AthleteListPanel extends JPanel {
     }
 
     // ------------------------------------------------------------------ Datos
-    /** Recarga desde el servicio (lo llama PrincipalFrames al entrar a la pestaña). */
+    /**
+     * Recarga desde el servicio (lo llama PrincipalFrames al entrar a la
+     * pestaña).
+     */
     public void loadAthleteData() {
         applyFilterKeepingPage();
     }
@@ -265,7 +272,7 @@ public class AthleteListPanel extends JPanel {
                     .filter(a -> q.isEmpty()
                     || a.getId().toLowerCase().contains(q)
                     || a.getFullName().toLowerCase().contains(q)
-                    || a.getDiscipline().toLowerCase().contains(q))
+                    || SpanishLabels.of(a.getDiscipline()).toLowerCase().contains(q))
                     .collect(Collectors.toList());
         }
         refresh();
@@ -286,8 +293,9 @@ public class AthleteListPanel extends JPanel {
                 a.getId(),
                 a.getFullName(),
                 String.valueOf(a.getAge()),
-                a.getCategory() != null ? a.getCategory().getName() : "N/A",
-                a.getDiscipline(),
+                a.getCategory() != null ? SpanishLabels.of(a.getCategory().getName()) : "Sin categoría",
+                SpanishLabels.of(a.getDiscipline()),
+                a.getPaidUntil().format(DATE_FMT),
                 a.isActive() ? STATUS_ACTIVE : STATUS_INACTIVE,
                 "$" + String.format(CO, "%,.0f", a.getMonthlyFee())
             });
@@ -298,7 +306,7 @@ public class AthleteListPanel extends JPanel {
                 : "Mostrando " + (from + 1) + " a " + to + " de " + total + " registros");
         lblInfo.setBorder(new EmptyBorder(0, 6, 0, 0));
 
-        rebuildPagination(pages);
+        rebuildPagination(pages);   // restaurado: dibuja los botones de página
     }
 
     private void rebuildPagination(int pages) {
@@ -349,14 +357,16 @@ public class AthleteListPanel extends JPanel {
         String id = String.valueOf(tableModel.getValueAt(row, 0));
         String name = String.valueOf(tableModel.getValueAt(row, 1));
         boolean currentlyActive = STATUS_ACTIVE.equals(tableModel.getValueAt(row, COL_STATUS));
-        String action = currentlyActive ? "desactivar" : "activar";
 
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "¿Deseas " + action + " a " + name + "?",
+        String message = currentlyActive
+                ? "¿Deseas desactivar a " + name + "?"
+                : "¿Deseas activar a " + name + "?\nSi su mensualidad está vencida, se renovará por 1 mes.";
+
+        int confirm = JOptionPane.showConfirmDialog(this, message,
                 "Cambiar Estado", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
-            athleteService.setAthleteActive(id, !currentlyActive);
+            athleteService.toggleAthleteStatus(id);
             applyFilterKeepingPage();
         }
     }
@@ -390,7 +400,9 @@ public class AthleteListPanel extends JPanel {
     }
 
     // ------------------------------------------------------------------ Clases internas
-    /** Panel blanco con esquinas redondeadas que recorta a sus hijos (tabla). */
+    /**
+     * Panel blanco con esquinas redondeadas que recorta a sus hijos (tabla).
+     */
     private static class RoundedPanel extends JPanel {
 
         RoundedPanel() {
@@ -426,7 +438,9 @@ public class AthleteListPanel extends JPanel {
         }
     }
 
-    /** Renderer de la columna Estado: píldora verde (Activo) o roja (Inactivo). */
+    /**
+     * Renderer de la columna Estado: píldora verde (Activo) o roja (Inactivo).
+     */
     private static class BadgeRenderer implements TableCellRenderer {
 
         @Override
@@ -460,7 +474,7 @@ public class AthleteListPanel extends JPanel {
             Font f = new Font("Segoe UI", Font.PLAIN, 13);
             FontMetrics fm = g2.getFontMetrics(f);
             int w = fm.stringWidth(text) + 22, h = 26;
-            int x = 16, y = (getHeight() - h) / 2;
+            int x = 10, y = (getHeight() - h) / 2;
 
             g2.setColor(bg);
             g2.fillRoundRect(x, y, w, h, h, h);
@@ -471,7 +485,9 @@ public class AthleteListPanel extends JPanel {
         }
     }
 
-    /** Botón cuadrado de paginación (número o flecha). */
+    /**
+     * Botón cuadrado de paginación (número o flecha).
+     */
     private static class PageButton extends JButton {
 
         private final boolean active;

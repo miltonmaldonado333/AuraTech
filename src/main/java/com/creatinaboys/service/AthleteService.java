@@ -6,7 +6,6 @@ import com.creatinaboys.model.Athlete;
 import com.creatinaboys.repository.IAthleteRepository;
 
 import java.util.List;
-import java.util.Objects;
 
 public class AthleteService {
 
@@ -14,34 +13,18 @@ public class AthleteService {
     private final IBillingService billingService;
 
     public AthleteService(IAthleteRepository repository, IBillingService billingService) {
-        this.repository = Objects.requireNonNull(repository, "El repositorio de atletas no puede ser nulo.");
-        this.billingService = Objects.requireNonNull(billingService, "El servicio de facturación no puede ser nulo.");
+        this.repository = repository;
+        this.billingService = billingService;
     }
 
-<<<<<<< HEAD
-=======
-    /**
-     * Un único método de registro para cualquier Atleta (Cumple OCP, DIP y
-     * SRP). El objeto Atleta ya llega instanciado desde el controlador o la UI.
-     * @param athlete
-     * @return {@code true} si se registró; {@code false} si ya existe un atleta con ese documento.
-     * @throws com.creatinaboys.exceptions.InvalidAgeException si la edad es menor a 5 años.
-     * @throws IllegalArgumentException si el atleta es nulo.
-     */
->>>>>>> bfad72714bbc47f956f73d4a25be8f4ecebe07a2
     public boolean registerAthlete(Athlete athlete) throws InvalidAgeException {
-        if (athlete == null) {
-            throw new IllegalArgumentException("El atleta a registrar no puede ser nulo.");
-        }
-        athlete.calculateFee(billingService); // asigna categoría y tarifa según la disciplina
+        athlete.setCategory(billingService.determineCategory(athlete.getAge()));
+        athlete.setMonthlyFee(billingService.calculateFee(athlete.getAge()));
         return repository.save(athlete);
     }
 
     public Athlete findAthlete(String id) throws AthleteNotFoundException {
-        if (id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException("El documento del atleta es obligatorio.");
-        }
-        return repository.findById(id.trim());
+        return repository.findById(id);
     }
 
     public List<Athlete> getAllAthletes() {
@@ -49,10 +32,7 @@ public class AthleteService {
     }
 
     public boolean deleteAthlete(String id) {
-        if (id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException("El documento del atleta es obligatorio.");
-        }
-        return repository.deleteById(id.trim());
+        return repository.deleteById(id);
     }
 
     public int getTotalAthletesCount() {
@@ -64,11 +44,49 @@ public class AthleteService {
                 .filter(type::isInstance)
                 .count();
     }
-<<<<<<< HEAD
 
     // ------------------------------------------------------------------ Estado y mensualidad
 
-    /** Activa o desactiva a mano y bloquea la política automática para ese deportista. */
+    /**
+     * Recalcula el estado de todos según la política (vencimiento).
+     * - Si la política dice "inactivo", queda inactivo siempre (aunque se haya activado a mano).
+     * - Si un deportista fue desactivado a mano, sigue inactivo hasta que se reactive o renueve.
+     * Solo escribe el archivo cuando algo cambió.
+     */
+    public void applyActivationPolicy(IActivationPolicy policy) {
+        for (Athlete a : getAllAthletes()) {
+            boolean should = policy.shouldBeActive(a);
+            boolean blockedManually = a.isManualOverride() && !a.isActive();
+            boolean target = should && !blockedManually;
+
+            if (a.isActive() != target) {
+                a.setActive(target);
+                persist(a);
+            }
+        }
+    }
+
+    /** Botón Activar / Desactivar. */
+    public boolean toggleAthleteStatus(String id) {
+        try {
+            Athlete a = repository.findById(id);
+            if (a.isActive()) {
+                a.setActiveManually(false);          // desactivado a mano
+            } else if (a.isMembershipExpired(0)) {
+                a.renewMembership(1);                // vencido: renueva 1 mes
+                a.clearManualOverride();
+                a.setActive(true);
+            } else {
+                a.clearManualOverride();             // vigente: solo reactiva
+                a.setActive(true);
+            }
+            return repository.update(a);
+        } catch (AthleteNotFoundException e) {
+            return false;
+        }
+    }
+
+    /** Activa o desactiva a mano (se conserva por compatibilidad). */
     public boolean setAthleteActive(String id, boolean active) {
         try {
             Athlete a = repository.findById(id);
@@ -79,21 +97,7 @@ public class AthleteService {
         }
     }
 
-    /** Recalcula el estado según la política, salvo los fijados a mano. Solo guarda si hubo cambio. */
-    public void applyActivationPolicy(IActivationPolicy policy) {
-        for (Athlete a : getAllAthletes()) {
-            if (a.isManualOverride()) {
-                continue;
-            }
-            boolean should = policy.shouldBeActive(a);
-            if (a.isActive() != should) {
-                a.setActive(should);
-                persist(a);
-            }
-        }
-    }
-
-    /** Extiende la mensualidad y reactiva al deportista. Lo llamará el módulo de Pagos. */
+    /** Extiende la mensualidad y reactiva. Lo llamará el módulo de Pagos. */
     public boolean renewMembership(String id, int months) {
         try {
             Athlete a = repository.findById(id);
@@ -110,9 +114,7 @@ public class AthleteService {
         try {
             repository.update(a);
         } catch (AthleteNotFoundException e) {
-            // El deportista fue eliminado mientras se evaluaba; no hay nada que guardar.
+            // Fue eliminado mientras se evaluaba; no hay nada que guardar.
         }
     }
-=======
->>>>>>> bfad72714bbc47f956f73d4a25be8f4ecebe07a2
 }
