@@ -23,7 +23,7 @@ public class HealthRecord {
         this.athleteId = athleteId;
         this.fitnessStatus = fitnessStatus != null ? fitnessStatus : FitnessStatusEnum.FIT;
         this.assessmentDate = assessmentDate != null ? assessmentDate : LocalDate.now();
-        this.restrictions = restrictions;
+        this.restrictions = restrictions != null ? restrictions : "";
         this.injuries = new ArrayList<>();
     }
 
@@ -34,11 +34,14 @@ public class HealthRecord {
     }
 
     public boolean updateFitnessStatus(FitnessStatusEnum newStatus, String newRestrictions, LocalDate newAssessmentDate) {
+        if (newStatus == null) {
+            throw new IllegalArgumentException("El estado de aptitud es obligatorio");
+        }
         if (newAssessmentDate != null && newAssessmentDate.isAfter(LocalDate.now())) {
             throw new IllegalArgumentException("La fecha de valoración no puede ser futura");
         }
         this.fitnessStatus = newStatus;
-        this.restrictions = newRestrictions;
+        this.restrictions = newRestrictions != null ? newRestrictions : "";
         this.assessmentDate = newAssessmentDate != null ? newAssessmentDate : LocalDate.now();
         return true;
     }
@@ -47,18 +50,23 @@ public class HealthRecord {
     public String getAthleteId() { return athleteId; }
 
     public FitnessStatusEnum getFitnessStatus() { return fitnessStatus; }
-    public void setFitnessStatus(FitnessStatusEnum fitnessStatus) { this.fitnessStatus = fitnessStatus; }
+    public void setFitnessStatus(FitnessStatusEnum fitnessStatus) {
+        if (fitnessStatus == null) {
+            throw new IllegalArgumentException("El estado de aptitud es obligatorio");
+        }
+        this.fitnessStatus = fitnessStatus;
+    }
 
     public LocalDate getAssessmentDate() { return assessmentDate; }
     public void setAssessmentDate(LocalDate assessmentDate) {
         if (assessmentDate != null && assessmentDate.isAfter(LocalDate.now())) {
             throw new IllegalArgumentException("La fecha no puede ser futura");
         }
-        this.assessmentDate = assessmentDate;
+        this.assessmentDate = assessmentDate != null ? assessmentDate : LocalDate.now();
     }
 
     public String getRestrictions() { return restrictions; }
-    public void setRestrictions(String restrictions) { this.restrictions = restrictions; }
+    public void setRestrictions(String restrictions) { this.restrictions = restrictions != null ? restrictions : ""; }
 
     public List<InjuryRecord> getInjuries() {
         return Collections.unmodifiableList(injuries); 

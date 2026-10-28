@@ -1,18 +1,21 @@
 package com.creatinaboys.repository;
 
+import com.creatinaboys.exceptions.PersistenceException;
 import com.creatinaboys.model.CategoryEnum;
 import com.creatinaboys.model.Coach;
-import com.creatinaboys.exceptions.PersistenceException;
 
-import java.io.*;
-import java.nio.file.*;
-import java.util.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class FileCoachRepository implements ICoachRepository {
 
     private static final String DEFAULT_FILE_PATH = "data/coaches.txt";
-    private final String filePath;
+    private final Path path;
     private final CoachParser parser;
 
     public FileCoachRepository() {
@@ -20,12 +23,15 @@ public class FileCoachRepository implements ICoachRepository {
     }
 
     public FileCoachRepository(String filePath) {
-        this.filePath = filePath;
+        this.path = Paths.get(Objects.requireNonNull(filePath, "filePath cannot be null."));
         this.parser = new CoachParser();
     }
 
     @Override
     public boolean save(Coach coach) throws PersistenceException {
+        if (coach == null) {
+            throw new IllegalArgumentException("El entrenador no puede ser nulo.");
+        }
         List<Coach> coaches = findAll();
         if (coaches.stream().anyMatch(c -> c.getId().equalsIgnoreCase(coach.getId()))) {
             return false; // Ya existe un entrenador con ese ID
@@ -42,23 +48,26 @@ public class FileCoachRepository implements ICoachRepository {
                 .findFirst();
     }
 
+    /** Una línea dañada se omite (y se informa) en lugar de impedir cargar al resto. */
     @Override
     public List<Coach> findAll() throws PersistenceException {
-        Path path = Paths.get(filePath);
-        if (!Files.exists(path)) {
-            return new ArrayList<>();
-        }
-
         List<Coach> coaches = new ArrayList<>();
-        try (BufferedReader reader = Files.newBufferedReader(path)) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.isBlank() || !line.startsWith("COACH;")) continue;
-                String[] fields = line.split(";");
-                coaches.add(parser.fromTextFields(fields));
+        List<String> lines = FileStorage.readLines(path);
+
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i);
+            if (line.isBlank()) {
+                continue;
             }
-        } catch (IOException e) {
-            throw new PersistenceException("Error al leer el archivo de entrenadores: " + filePath, e);
+            try {
+                String[] fields = TextCodec.split(line, ';');
+                if (!"COACH".equals(fields[0].trim())) {
+                    continue;
+                }
+                coaches.add(parser.fromTextFields(fields));
+            } catch (RuntimeException e) {
+                System.err.println("Línea " + (i + 1) + " omitida en " + path + ": " + e.getMessage());
+            }
         }
         return coaches;
     }
@@ -82,36 +91,25 @@ public class FileCoachRepository implements ICoachRepository {
 
     @Override
     public boolean update(Coach coach) throws PersistenceException {
+        if (coach == null) {
+            throw new IllegalArgumentException("El entrenador no puede ser nulo.");
+        }
         List<Coach> coaches = findAll();
-        int index = -1;
         for (int i = 0; i < coaches.size(); i++) {
             if (coaches.get(i).getId().equalsIgnoreCase(coach.getId())) {
-                index = i;
-                break;
+                coaches.set(i, coach);
+                saveAll(coaches);
+                return true;
             }
         }
-
-        if (index == -1) return false;
-
-        coaches.set(index, coach);
-        saveAll(coaches);
-        return true;
+        return false;
     }
 
     private void saveAll(List<Coach> coaches) throws PersistenceException {
-        Path path = Paths.get(filePath);
-        try {
-            if (path.getParent() != null) {
-                Files.createDirectories(path.getParent());
-            }
-            try (BufferedWriter writer = Files.newBufferedWriter(path)) {
-                for (Coach coach : coaches) {
-                    writer.write(parser.toTextLine(coach));
-                    writer.newLine();
-                }
-            }
-        } catch (IOException e) {
-            throw new PersistenceException("Error al guardar en el archivo de entrenadores: " + filePath, e);
+        List<String> lines = new ArrayList<>(coaches.size());
+        for (Coach coach : coaches) {
+            lines.add(parser.toTextLine(coach));
         }
+        FileStorage.writeLines(path, lines);
     }
 }

@@ -1,24 +1,22 @@
 package com.creatinaboys.repository;
 
 import com.creatinaboys.exceptions.AthleteNotFoundException;
+import com.creatinaboys.exceptions.PersistenceException;
 import com.creatinaboys.model.Athlete;
 import com.creatinaboys.model.Basketballer;
 import com.creatinaboys.model.Footballer;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class FileAthleteRepository implements IAthleteRepository {
 
     private static final String DEFAULT_FILE_PATH = "data/athletes.txt";
 
-    private final String filePath;
+    private final Path path;
     private final AthleteParserRegistry parsers;
 
     public FileAthleteRepository() {
@@ -30,8 +28,8 @@ public class FileAthleteRepository implements IAthleteRepository {
     }
 
     public FileAthleteRepository(String filePath, AthleteParserRegistry parsers) {
-        this.filePath = filePath;
-        this.parsers = parsers;
+        this.path = Paths.get(Objects.requireNonNull(filePath, "filePath cannot be null."));
+        this.parsers = Objects.requireNonNull(parsers, "parsers cannot be null.");
     }
 
     private static AthleteParserRegistry defaultParsers() {
@@ -40,10 +38,16 @@ public class FileAthleteRepository implements IAthleteRepository {
                 .register(Basketballer.class, new BasketballerParser());
     }
 
+    /** Guarda un atleta nuevo. Devuelve false (sin modificar nada) si ya existe uno con ese id. */
     @Override
     public boolean save(Athlete athlete) {
+        if (athlete == null) {
+            throw new IllegalArgumentException("athlete cannot be null.");
+        }
         List<Athlete> athletes = findAll();
-        athletes.removeIf(a -> a.getId().equals(athlete.getId()));
+        if (athletes.stream().anyMatch(a -> a.getId().equals(athlete.getId()))) {
+            return false;
+        }
         athletes.add(athlete);
         saveAll(athletes);
         return true;
@@ -57,30 +61,27 @@ public class FileAthleteRepository implements IAthleteRepository {
                 .orElseThrow(() -> new AthleteNotFoundException(id));
     }
 
+    /**
+     * Lee todos los atletas. Una línea dañada no impide cargar las demás: se
+     * omite y se informa por la salida de error (el archivo original queda
+     * respaldado como .bak antes de cualquier reescritura).
+     */
     @Override
     public List<Athlete> findAll() {
         List<Athlete> athletes = new ArrayList<>();
-        File file = new File(filePath);
+        List<String> lines = FileStorage.readLines(path);
 
-        if (!file.exists()) {
-            return athletes;
-        }
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.isBlank()) {
-                    continue;
-                }
-                Athlete athlete = parseLine(line);
-                if (athlete != null) {
-                    athletes.add(athlete);
-                }
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i);
+            if (line.isBlank()) {
+                continue;
             }
-        } catch (IOException e) {
-            System.err.println("Error reading athlete data file: " + e.getMessage());
+            try {
+                athletes.add(parseLine(line));
+            } catch (RuntimeException e) {
+                System.err.println("Línea " + (i + 1) + " omitida en " + path + ": " + e.getMessage());
+            }
         }
-
         return athletes;
     }
 
@@ -94,39 +95,33 @@ public class FileAthleteRepository implements IAthleteRepository {
         return removed;
     }
 
+    /** Reemplaza el atleta almacenado que tenga el mismo id. */
     @Override
     public boolean update(Athlete athlete) throws AthleteNotFoundException {
-        findById(athlete.getId());
-        return save(athlete);
+        if (athlete == null) {
+            throw new IllegalArgumentException("athlete cannot be null.");
+        }
+        List<Athlete> athletes = findAll();
+        for (int i = 0; i < athletes.size(); i++) {
+            if (athletes.get(i).getId().equals(athlete.getId())) {
+                athletes.set(i, athlete);
+                saveAll(athletes);
+                return true;
+            }
+        }
+        throw new AthleteNotFoundException(athlete.getId());
     }
 
     private void saveAll(List<Athlete> athletes) {
-        File file = new File(filePath);
-        File parentDir = file.getParentFile();
-
-        if (parentDir != null && !parentDir.exists()) {
-            parentDir.mkdirs();
+        List<String> lines = new ArrayList<>(athletes.size());
+        for (Athlete athlete : athletes) {
+            lines.add(parsers.toTextLine(athlete));
         }
-
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-            for (Athlete athlete : athletes) {
-                writer.write(toLine(athlete));
-                writer.newLine();
-            }
-        } catch (IOException e) {
-            System.err.println("Error writing athlete data: " + e.getMessage());
-        }
-    }
-
-    private String toLine(Athlete athlete) {
-        return parsers.toTextLine(athlete);
+        FileStorage.writeLines(path, lines);
     }
 
     private Athlete parseLine(String line) {
-        String[] fields = line.split(";", -1);
-        if (fields.length == 0) {
-            return null;
-        }
-        return parsers.fromTextLine(fields[0], fields);
+        String[] fields = TextCodec.split(line, ';');
+        return parsers.fromTextLine(fields[0].trim(), fields);
     }
 }

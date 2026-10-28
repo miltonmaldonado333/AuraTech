@@ -51,6 +51,9 @@ public class AthleteRepository implements IAthleteRepository {
 
     @Override
     public boolean update(Athlete athlete) throws AthleteNotFoundException {
+        if (athlete == null) {
+            throw new IllegalArgumentException("athlete cannot be null.");
+        }
         int index = indexOf(athlete.getId());
         if (index < 0) {
             throw new AthleteNotFoundException(athlete.getId());

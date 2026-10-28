@@ -3,11 +3,16 @@ package com.creatinaboys.model;
 import com.creatinaboys.exceptions.InvalidAgeException;
 import com.creatinaboys.service.IBillingService;
 
+import java.util.Objects;
+
 /**
  * Base entity for every athlete registered in the club. Concrete subclasses
  * represent a specific sports discipline (OCP, LSP).
  */
 public abstract class Athlete {
+
+    /** Edad máxima aceptada por el modelo (la edad mínima del club la valida BillingService). */
+    public static final int MAX_AGE = 120;
 
     private String id;
     private String fullName;
@@ -20,7 +25,7 @@ public abstract class Athlete {
     protected Athlete(String id, String fullName, int age, String phone, int jerseyNumber) {
         this.id = requireText(id, "id");
         this.fullName = requireText(fullName, "fullName");
-        this.age = age;
+        this.age = requireValidAge(age);
         this.phone = requireText(phone, "phone");
         if (jerseyNumber < 0) {
             throw new IllegalArgumentException("jerseyNumber cannot be negative.");
@@ -43,6 +48,13 @@ public abstract class Athlete {
      * @return 
      */
     public abstract String getDiscipline();
+
+    protected static int requireValidAge(int age) {
+        if (age <= 0 || age > MAX_AGE) {
+            throw new IllegalArgumentException("age must be between 1 and " + MAX_AGE + ".");
+        }
+        return age;
+    }
 
     protected static String requireText(String value, String field) {
         if (value == null || value.trim().isEmpty()) {
@@ -72,7 +84,7 @@ public abstract class Athlete {
     }
 
     public void setAge(int age) {
-        this.age = age;
+        this.age = requireValidAge(age);
     }
 
     public String getPhone() {
@@ -99,6 +111,9 @@ public abstract class Athlete {
     }
 
     public void setMonthlyFee(double monthlyFee) {
+        if (Double.isNaN(monthlyFee) || Double.isInfinite(monthlyFee) || monthlyFee < 0) {
+            throw new IllegalArgumentException("monthlyFee must be a non-negative number.");
+        }
         this.monthlyFee = monthlyFee;
     }
 
@@ -108,6 +123,23 @@ public abstract class Athlete {
 
     public void setCategory(CategoryEnum category) {
         this.category = category;
+    }
+
+    /** Dos atletas son el mismo si comparten documento de identidad. */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        return Objects.equals(id, ((Athlete) o).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 
     @Override

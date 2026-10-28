@@ -1,74 +1,82 @@
 package com.creatinaboys.repository;
 
+import com.creatinaboys.exceptions.PersistenceException;
 import com.creatinaboys.model.FitnessStatusEnum;
 import com.creatinaboys.model.HealthRecord;
 import com.creatinaboys.model.InjuryRecord;
-import com.creatinaboys.exceptions.PersistenceException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Formato: HEALTH;athleteId;status;date;restrictions;injuries
+ * donde injuries = lesión#lesión... y lesión = id~descripción~fecha~estado~observaciones.
+ * Todos los textos libres se escapan con {@link TextCodec}, por lo que pueden
+ * contener ';', '~' o '#' sin romper el archivo.
+ */
 public class HealthRecordParser {
 
-    public String toTextLine(HealthRecord record) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("HEALTH;");
-        sb.append(record.getAthleteId()).append(";");
-        sb.append(record.getFitnessStatus().name()).append(";");
-        sb.append(record.getAssessmentDate()).append(";");
-        sb.append(record.getRestrictions() != null && !record.getRestrictions().isBlank() ? record.getRestrictions() : "NONE").append(";");
+    private static final String TYPE = "HEALTH";
+    private static final int FIELD_COUNT = 5;
 
-        // Serializar lista de lesiones
-        List<InjuryRecord> injuries = record.getInjuries();
-        if (injuries.isEmpty()) {
-            sb.append("NONE");
-        } else {
-            List<String> serializedInjuries = new ArrayList<>();
-            for (InjuryRecord injury : injuries) {
-                String injStr = String.join("~",
-                        injury.getId(),
-                        injury.getDescription(),
-                        injury.getDate().toString(),
-                        injury.getStatus(),
-                        injury.getObservations() != null && !injury.getObservations().isBlank() ? injury.getObservations() : "NONE"
-                );
-                serializedInjuries.add(injStr);
-            }
-            sb.append(String.join("#", serializedInjuries));
+    public String toTextLine(HealthRecord record) {
+        List<String> injuries = new ArrayList<>();
+        for (InjuryRecord injury : record.getInjuries()) {
+            injuries.add(String.join("~",
+                    TextCodec.escape(injury.getId()),
+                    TextCodec.escape(injury.getDescription()),
+                    injury.getDate().toString(),
+                    TextCodec.escape(injury.getStatus()),
+                    TextCodec.escapeOptional(injury.getObservations())
+            ));
         }
 
-        return sb.toString();
+        return String.join(";",
+                TYPE,
+                TextCodec.escape(record.getAthleteId()),
+                record.getFitnessStatus().name(),
+                String.valueOf(record.getAssessmentDate()),
+                TextCodec.escapeOptional(record.getRestrictions()),
+                String.join("#", injuries)
+        );
     }
 
+    /** @param fields campos de la línea separados con {@link TextCodec#split}. */
     public HealthRecord fromTextFields(String[] fields) throws PersistenceException {
         try {
-            // fields[0] es "HEALTH"
-            String athleteId = fields[1];
-            FitnessStatusEnum status = FitnessStatusEnum.valueOf(fields[2]);
-            LocalDate assessmentDate = LocalDate.parse(fields[3]);
-            String restrictions = fields[4].equals("NONE") ? "" : fields[4];
+            TextCodec.requireFields(fields, FIELD_COUNT, TYPE);
+            String athleteId = TextCodec.unescape(fields[1]);
+            FitnessStatusEnum status = FitnessStatusEnum.valueOf(fields[2].trim());
+            LocalDate assessmentDate = LocalDate.parse(fields[3].trim());
+            String restrictions = TextCodec.unescapeOptional(fields[4]);
 
             HealthRecord record = new HealthRecord(athleteId, status, assessmentDate, restrictions);
 
-            // Deserializar lesiones si existen
-            if (fields.length > 5 && !fields[5].equals("NONE")) {
-                String[] injuriesArray = fields[5].split("#");
-                for (String injStr : injuriesArray) {
-                    String[] injFields = injStr.split("~");
-                    String injId = injFields[0];
-                    String desc = injFields[1];
-                    LocalDate injDate = LocalDate.parse(injFields[2]);
-                    String injStatus = injFields[3];
-                    String obs = injFields[4].equals("NONE") ? "" : injFields[4];
-
-                    record.addInjury(new InjuryRecord(injId, desc, injDate, injStatus, obs));
+            // Lesiones (campo opcional; "NONE" en archivos antiguos significa sin lesiones)
+            String rawInjuries = fields.length > 5 ? fields[5] : "";
+            if (!rawInjuries.isBlank() && !TextCodec.LEGACY_EMPTY.equals(rawInjuries)) {
+                for (String injStr : TextCodec.split(rawInjuries, '#')) {
+                    if (injStr.isBlank()) {
+                        continue;
+                    }
+                    String[] f = TextCodec.split(injStr, '~');
+                    TextCodec.requireFields(f, 4, "lesión");
+                    String obs = f.length > 4 ? TextCodec.unescapeOptional(f[4]) : "";
+                    record.addInjury(new InjuryRecord(
+                            TextCodec.unescape(f[0]),
+                            TextCodec.unescape(f[1]),
+                            LocalDate.parse(f[2].trim()),
+                            TextCodec.unescape(f[3]),
+                            obs));
                 }
             }
 
             return record;
+        } catch (PersistenceException e) {
+            throw e;
         } catch (Exception e) {
-            throw new PersistenceException("Error al parsear el registro de salud", e);
+            throw new PersistenceException("Error al parsear el registro de salud: " + e.getMessage(), e);
         }
     }
 }

@@ -24,10 +24,10 @@ public class Coach {
             throw new IllegalArgumentException("La categoría asignada es obligatoria");
         }
 
-        this.id = id;
-        this.fullName = fullName;
-        this.phone = phone != null ? phone : "";
-        this.discipline = discipline;
+        this.id = id.trim();
+        this.fullName = fullName.trim();
+        this.phone = phone != null ? phone.trim() : "";
+        this.discipline = discipline.trim();
         this.category = category;
     }
 
@@ -44,7 +44,7 @@ public class Coach {
         if (fullName == null || fullName.isBlank()) {
             throw new IllegalArgumentException("El nombre completo no puede estar vacío");
         }
-        this.fullName = fullName;
+        this.fullName = fullName.trim();
     }
 
     public String getPhone() {
@@ -52,7 +52,7 @@ public class Coach {
     }
 
     public void setPhone(String phone) {
-        this.phone = phone != null ? phone : "";
+        this.phone = phone != null ? phone.trim() : "";
     }
 
     public String getDiscipline() {
@@ -63,7 +63,7 @@ public class Coach {
         if (discipline == null || discipline.isBlank()) {
             throw new IllegalArgumentException("La disciplina no puede estar vacía");
         }
-        this.discipline = discipline;
+        this.discipline = discipline.trim();
     }
 
     public CategoryEnum getCategory() {

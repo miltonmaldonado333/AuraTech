@@ -1,6 +1,8 @@
 package com.creatinaboys.exceptions;
 
 public class CoachNotFoundException extends Exception {
+    private static final long serialVersionUID = 1L;
+
     private final String searchedId;
 
     public CoachNotFoundException(String searchedId) {
