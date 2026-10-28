@@ -22,7 +22,7 @@ public class PaymentParser {
         );
     }
 
-    /** @param fields campos de la línea separados con {@link TextCodec#split}. */
+    
     public Payment fromTextFields(String[] fields) throws PersistenceException {
         try {
             TextCodec.requireFields(fields, FIELD_COUNT, TYPE);
