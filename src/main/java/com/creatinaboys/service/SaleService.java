@@ -11,6 +11,7 @@ import com.creatinaboys.repository.IPaymentRepository;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -78,8 +79,28 @@ public class SaleService implements ISaleService {
         }
 
         Athlete athlete = athleteRepository.findById(athleteId.trim());
+        double balance = Math.max(0.0,
+                athlete.getMonthlyFee() - paidThisMonthByAthlete().getOrDefault(athlete.getId(), 0.0));
+
+        if (balance <= EPSILON) {
+            throw new IllegalArgumentException("La mensualidad de este mes ya está pagada.");
+        }
+        if (amount > balance + EPSILON) {
+            throw new IllegalArgumentException(String.format(java.util.Locale.forLanguageTag("es-CO"),
+                    "El monto ($%,.0f) supera el saldo pendiente ($%,.0f).", amount, balance));
+        }
+
         Payment payment = new Payment(athlete.getId(), amount, LocalDate.now(clock), currentPeriod());
-        return paymentRepository.save(payment);
+        boolean saved = paymentRepository.save(payment);
+
+        // Si el pago completa la mensualidad, se extiende la afiliación un mes y queda activo.
+        if (saved && balance - amount <= EPSILON) {
+            athlete.renewMembership(1);
+            athlete.clearManualOverride();
+            athlete.setActive(!athlete.isMembershipExpired(0));
+            athleteRepository.update(athlete);
+        }
+        return saved;
     }
 
     /**
@@ -155,6 +176,18 @@ public class SaleService implements ISaleService {
         return athleteRepository.findAll().stream()
                 .filter(Objects::nonNull)
                 .filter(a -> paid.getOrDefault(a.getId(), 0.0) + EPSILON < a.getMonthlyFee())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Map<String, Double> getPaidThisMonthByAthlete() {
+        return paidThisMonthByAthlete();
+    }
+
+    @Override
+    public List<Payment> getPaymentHistory() {
+        return paymentRepository.findAll().stream()
+                .sorted(Comparator.comparing(Payment::getPaymentDate).reversed())
                 .collect(Collectors.toList());
     }
 

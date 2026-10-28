@@ -3,6 +3,7 @@ package com.creatinaboys.service;
 import com.creatinaboys.exceptions.AthleteNotFoundException;
 import com.creatinaboys.model.Athlete;
 import com.creatinaboys.model.CategoryEnum;
+import com.creatinaboys.model.Payment;
 
 import java.util.List;
 import java.util.Map;
@@ -27,7 +28,9 @@ public interface ISaleService {
      * @param amount Monto abonado o pagado en pesos colombianos (COP).
      * @return {@code true} si el pago se procesó y registró correctamente; {@code false} en caso contrario.
      * @throws AthleteNotFoundException Si no se encuentra un atleta con la identificación proporcionada en el repositorio.
-     * @throws IllegalArgumentException Si el ID ingresado es nulo, está vacío o el monto es menor o igual a cero.
+     * @throws IllegalArgumentException Si el ID ingresado es nulo, está vacío, el monto es menor o igual a cero,
+     *         la mensualidad del mes ya está pagada o el monto supera el saldo pendiente.
+     *         Cuando el pago completa la mensualidad, esta se renueva un mes y el deportista queda activo.
      */
     boolean processMonthlyPayment(String athleteId, double amount) throws AthleteNotFoundException;
 
@@ -80,4 +83,18 @@ public interface ISaleService {
      * @throws AthleteNotFoundException Si no existe un atleta con ese documento.
      */
     double getPendingBalance(String athleteId) throws AthleteNotFoundException;
+
+    /**
+     * Total pagado en el mes actual por cada deportista.
+     *
+     * @return Mapa documento → monto pagado (los que no han pagado no aparecen).
+     */
+    Map<String, Double> getPaidThisMonthByAthlete();
+
+    /**
+     * Historial completo de pagos, del más reciente al más antiguo.
+     *
+     * @return Lista de pagos registrados; nunca {@code null}.
+     */
+    List<Payment> getPaymentHistory();
 }
