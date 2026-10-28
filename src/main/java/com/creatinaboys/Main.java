@@ -14,7 +14,6 @@ import com.creatinaboys.service.IDisciplineService;
 import com.creatinaboys.service.ISaleService;
 import com.creatinaboys.service.SaleService;
 import com.creatinaboys.ui.PrincipalFrames;
-import com.creatinaboys.service.CoachService;
 
 import javax.swing.*;
 

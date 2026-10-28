@@ -167,9 +167,7 @@ public class PrincipalFrames extends JFrame {
         mainContentPanel.add(disciplinePanel, "DISCIPLINAS");
 
         mainContentPanel.add(coachPanel, "ENTRENADORES");
-        mainContentPanel.add(createPlaceholderPanel("Módulo de Control de Pagos y Cartera"), "PAGOS");
 
-        mainContentPanel.add(createPlaceholderPanel("Módulo de Entrenadores por Categoría"), "ENTRENADORES");
         mainContentPanel.add(paymentPanel, "PAGOS");
 
         mainContentPanel.add(createPlaceholderPanel("Módulo de Reportes Financieros"), "REPORTES");
