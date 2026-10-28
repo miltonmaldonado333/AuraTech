@@ -12,7 +12,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-public class HealthService {
+public class HealthService implements IHealthService {
 
     private final IHealthRepository healthRepository;
     private final IAthleteRepository athleteRepository;
