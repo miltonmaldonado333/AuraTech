@@ -1,10 +1,13 @@
 package com.creatinaboys;
 
 import com.creatinaboys.repository.FileAthleteRepository;
+import com.creatinaboys.repository.FileDisciplineRepository;
 import com.creatinaboys.repository.IAthleteRepository;
 import com.creatinaboys.service.AthleteService;
 import com.creatinaboys.service.BillingService;
+import com.creatinaboys.service.DisciplineService;
 import com.creatinaboys.service.IBillingService;
+import com.creatinaboys.service.IDisciplineService;
 import com.creatinaboys.service.ISaleService;
 import com.creatinaboys.service.SaleService;
 import com.creatinaboys.ui.PrincipalFrames;
@@ -33,8 +36,10 @@ public class Main {
             AthleteService athleteService = new AthleteService(repository, billingService);
             ISaleService saleService = new SaleService(repository, billingService);
 
+            IDisciplineService disciplineService = new DisciplineService(new FileDisciplineRepository());
+
             // Iniciar interfaz gráfica
-            PrincipalFrames frame = new PrincipalFrames(athleteService, saleService);
+            PrincipalFrames frame = new PrincipalFrames(athleteService, saleService, billingService, disciplineService);
             frame.setVisible(true);
         });
     }
