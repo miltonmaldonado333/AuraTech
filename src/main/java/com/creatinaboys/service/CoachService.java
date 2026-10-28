@@ -136,4 +136,16 @@ public class CoachService implements ICoachService {
     public int getTotalCoachesCount() throws PersistenceException {
         return coachRepository.findAll().size();
     }
+    
+        @Override
+    public boolean toggleCoachStatus(String coachId) throws CoachNotFoundException, PersistenceException {
+        if (coachId == null || coachId.trim().isEmpty()) {
+            throw new IllegalArgumentException("El ID del entrenador es obligatorio.");
+        }
+        Coach coach = coachRepository.findById(coachId.trim())
+                .orElseThrow(() -> new CoachNotFoundException(coachId.trim()));
+        coach.setActive(!coach.isActive());
+        coachRepository.update(coach);
+        return coach.isActive();
+    }
 }

@@ -16,7 +16,8 @@ public class CoachParser {
                 TextCodec.escape(coach.getFullName()),
                 TextCodec.escapeOptional(coach.getPhone()),
                 TextCodec.escape(coach.getDiscipline()),
-                coach.getCategory().name()
+                coach.getCategory().name(),
+                String.valueOf(coach.isActive())
         );
     }
 
@@ -30,7 +31,10 @@ public class CoachParser {
             String discipline = TextCodec.unescape(fields[4]);
             CategoryEnum category = CategoryEnum.valueOf(fields[5].trim());
 
-            return new Coach(id, fullName, phone, discipline, category);
+            // El 7.º campo (estado) es opcional para seguir leyendo archivos antiguos de 6 campos.
+            boolean active = fields.length < 7 || Boolean.parseBoolean(fields[6].trim());
+
+            return new Coach(id, fullName, phone, discipline, category, active);
         } catch (PersistenceException e) {
             throw e;
         } catch (Exception e) {

@@ -9,8 +9,14 @@ public class Coach {
     private String phone;
     private String discipline;
     private CategoryEnum category;
+    private boolean active;
 
+    /** Crea un entrenador activo. */
     public Coach(String id, String fullName, String phone, String discipline, CategoryEnum category) {
+        this(id, fullName, phone, discipline, category, true);
+    }
+
+    public Coach(String id, String fullName, String phone, String discipline, CategoryEnum category, boolean active) {
         if (id == null || id.isBlank()) {
             throw new IllegalArgumentException("El ID o documento del entrenador es obligatorio");
         }
@@ -29,6 +35,7 @@ public class Coach {
         this.phone = phone != null ? phone.trim() : "";
         this.discipline = discipline.trim();
         this.category = category;
+        this.active = active;
     }
 
     // Getters y Setters con validaciones
@@ -77,6 +84,14 @@ public class Coach {
         this.category = category;
     }
 
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -102,6 +117,7 @@ public class Coach {
                 + ", phone='" + phone + '\''
                 + ", discipline='" + discipline + '\''
                 + ", category=" + category
+                + ", active=" + active
                 + '}';
     }
 }

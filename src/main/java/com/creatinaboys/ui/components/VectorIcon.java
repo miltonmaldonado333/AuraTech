@@ -4,13 +4,15 @@ import javax.swing.Icon;
 import java.awt.*;
 import java.awt.geom.*;
 
-/** Íconos vectoriales dibujados con Java2D (cuadrícula de 24x24). */
+/**
+ * Íconos vectoriales dibujados con Java2D (cuadrícula de 24x24).
+ */
 public class VectorIcon implements Icon {
 
     public enum Type {
-    HOME, USERS, USER_PLUS, TAG, TROPHY, WHISTLE, CARD, CHART, GEAR,
-    ID, USER, PHONE, HASH, BALL, CALENDAR, CHECK, CLOSE, RULER, FLAG, CHEVRON,
-    SEARCH, TRASH, LOGOUT, CHEV_LEFT, CHEV_RIGHT
+        HOME, USERS, USER_PLUS, TAG, TROPHY, WHISTLE, CARD, CHART, GEAR,
+        ID, USER, PHONE, HASH, BALL, CALENDAR, CHECK, CLOSE, RULER, FLAG, CHEVRON,
+        SEARCH, TRASH, LOGOUT, CHEV_LEFT, CHEV_RIGHT, EDIT
     }
 
     private final Type type;
@@ -23,10 +25,19 @@ public class VectorIcon implements Icon {
         this.color = color;
     }
 
-    public void setColor(Color color) { this.color = color; }
+    public void setColor(Color color) {
+        this.color = color;
+    }
 
-    @Override public int getIconWidth()  { return size; }
-    @Override public int getIconHeight() { return size; }
+    @Override
+    public int getIconWidth() {
+        return size;
+    }
+
+    @Override
+    public int getIconHeight() {
+        return size;
+    }
 
     @Override
     public void paintIcon(Component c, Graphics g, int x, int y) {
@@ -70,16 +81,22 @@ public class VectorIcon implements Icon {
             }
             case TROPHY -> {
                 Path2D cup = new Path2D.Double();
-                cup.moveTo(7, 4); cup.lineTo(17, 4); cup.lineTo(17, 9);
+                cup.moveTo(7, 4);
+                cup.lineTo(17, 4);
+                cup.lineTo(17, 9);
                 cup.curveTo(17, 12, 14.8, 14, 12, 14);
                 cup.curveTo(9.2, 14, 7, 12, 7, 9);
                 cup.closePath();
                 g.draw(cup);
                 Path2D left = new Path2D.Double();
-                left.moveTo(7, 6); left.lineTo(3.5, 6); left.curveTo(3.5, 10, 5, 11, 7, 11);
+                left.moveTo(7, 6);
+                left.lineTo(3.5, 6);
+                left.curveTo(3.5, 10, 5, 11, 7, 11);
                 g.draw(left);
                 Path2D right = new Path2D.Double();
-                right.moveTo(17, 6); right.lineTo(20.5, 6); right.curveTo(20.5, 10, 19, 11, 17, 11);
+                right.moveTo(17, 6);
+                right.lineTo(20.5, 6);
+                right.curveTo(20.5, 10, 19, 11, 17, 11);
                 g.draw(right);
                 line(g, 12, 14, 12, 18);
                 line(g, 8, 20.5, 16, 20.5);
@@ -141,8 +158,12 @@ public class VectorIcon implements Icon {
                 line(g, 8, 3, 8, 7);
                 line(g, 16, 3, 16, 7);
             }
-            case CHECK -> poly(g, false, 5, 12.5, 10, 17.5, 19, 7);
-            case CLOSE -> { line(g, 6, 6, 18, 18); line(g, 18, 6, 6, 18); }
+            case CHECK ->
+                poly(g, false, 5, 12.5, 10, 17.5, 19, 7);
+            case CLOSE -> {
+                line(g, 6, 6, 18, 18);
+                line(g, 18, 6, 6, 18);
+            }
             case RULER -> {
                 g.draw(new RoundRectangle2D.Double(2.5, 8, 19, 8, 2, 2));
                 line(g, 7, 8, 7, 12);
@@ -154,8 +175,9 @@ public class VectorIcon implements Icon {
                 line(g, 5, 3, 5, 21);
                 poly(g, true, 5, 4, 19, 4, 15, 8.5, 19, 13, 5, 13);
             }
-            case CHEVRON -> poly(g, false, 6, 9, 12, 15, 18, 9);
-                        case SEARCH -> {
+            case CHEVRON ->
+                poly(g, false, 6, 9, 12, 15, 18, 9);
+            case SEARCH -> {
                 g.draw(new Ellipse2D.Double(4, 4, 12, 12));
                 line(g, 14.5, 14.5, 20, 20);
             }
@@ -171,8 +193,15 @@ public class VectorIcon implements Icon {
                 line(g, 10, 12, 20, 12);
                 poly(g, false, 16, 8, 20, 12, 16, 16);
             }
-            case CHEV_LEFT -> poly(g, false, 15, 6, 9, 12, 15, 18);
-            case CHEV_RIGHT -> poly(g, false, 9, 6, 15, 12, 9, 18);
+            case CHEV_LEFT ->
+                poly(g, false, 15, 6, 9, 12, 15, 18);
+            case CHEV_RIGHT ->
+                poly(g, false, 9, 6, 15, 12, 9, 18);
+
+            case EDIT -> {
+                poly(g, true, 16, 4, 20, 8, 8, 20, 4, 20, 4, 16);
+                line(g, 13, 7, 17, 11);
+            }
         }
     }
 
@@ -183,8 +212,12 @@ public class VectorIcon implements Icon {
     private static void poly(Graphics2D g, boolean close, double... pts) {
         Path2D p = new Path2D.Double();
         p.moveTo(pts[0], pts[1]);
-        for (int i = 2; i < pts.length; i += 2) p.lineTo(pts[i], pts[i + 1]);
-        if (close) p.closePath();
+        for (int i = 2; i < pts.length; i += 2) {
+            p.lineTo(pts[i], pts[i + 1]);
+        }
+        if (close) {
+            p.closePath();
+        }
         g.draw(p);
     }
 }

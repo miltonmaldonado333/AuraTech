@@ -113,4 +113,14 @@ public interface ICoachService {
      * @throws PersistenceException Si ocurre un error en la lectura de datos.
      */
     int getTotalCoachesCount() throws PersistenceException;
+    
+        /**
+     * Alterna el estado (activo/inactivo) de un entrenador.
+     *
+     * @param coachId Documento del entrenador.
+     * @return El nuevo estado: {@code true} si quedó activo.
+     * @throws CoachNotFoundException Si el entrenador no existe.
+     * @throws PersistenceException Si ocurre un error al guardar el cambio.
+     */
+    boolean toggleCoachStatus(String coachId) throws CoachNotFoundException, PersistenceException;
 }

@@ -1,6 +1,7 @@
 package com.creatinaboys.ui;
 
 import com.creatinaboys.service.IBillingService;
+import com.creatinaboys.service.ICoachService;
 import com.creatinaboys.service.IDisciplineService;
 import com.creatinaboys.service.MembershipExpirationPolicy;
 import com.creatinaboys.service.AthleteService;
@@ -10,6 +11,7 @@ import com.creatinaboys.ui.components.SidebarButton;
 import com.creatinaboys.ui.panels.AthleteListPanel;
 import com.creatinaboys.ui.panels.AthleteRegisterPanel;
 import com.creatinaboys.ui.panels.CategoryPanel;
+import com.creatinaboys.ui.panels.CoachPanel;
 import com.creatinaboys.ui.panels.DisciplinePanel;
 import com.creatinaboys.ui.theme.ThemeConstants;
 
@@ -30,6 +32,7 @@ public class PrincipalFrames extends JFrame {
     private final ISaleService saleService;
     private final IBillingService billingService;
     private final IDisciplineService disciplineService;
+    private final ICoachService coachService;
 
     private CardLayout cardLayout;
     private JPanel mainContentPanel;
@@ -38,13 +41,16 @@ public class PrincipalFrames extends JFrame {
     private AthleteListPanel athleteListPanel;
     private CategoryPanel categoryPanel;
     private DisciplinePanel disciplinePanel;
+    private CoachPanel coachPanel;
 
     public PrincipalFrames(AthleteService athleteService, ISaleService saleService,
-                           IBillingService billingService, IDisciplineService disciplineService) {
+                           IBillingService billingService, IDisciplineService disciplineService,
+                           ICoachService coachService) {
         this.athleteService = athleteService;
         this.saleService = saleService;
         this.billingService = billingService;
         this.disciplineService = disciplineService;
+        this.coachService = coachService;
         this.sidebarButtons = new ArrayList<>();
 
         initFrame();
@@ -101,6 +107,8 @@ public class PrincipalFrames extends JFrame {
                     categoryPanel.refresh();
                 } else if ("DISCIPLINAS".equals(cardName) && disciplinePanel != null) {
                     disciplinePanel.refresh();
+                } else if ("ENTRENADORES".equals(cardName) && coachPanel != null) {
+                    coachPanel.loadCoaches();
                 }
                 cardLayout.show(mainContentPanel, cardName);
             });
@@ -136,6 +144,7 @@ public class PrincipalFrames extends JFrame {
         AthleteRegisterPanel registerPanel = new AthleteRegisterPanel(athleteService);
         categoryPanel = new CategoryPanel(athleteService, billingService, disciplineService);
         disciplinePanel = new DisciplinePanel(athleteService, disciplineService);
+        coachPanel = new CoachPanel(coachService);
 
         // Paneles Placeholders para las demás secciones
         mainContentPanel.add(createPlaceholderPanel("Bienvenido al Sistema Creatina-Boys"), "INICIO");
@@ -143,7 +152,7 @@ public class PrincipalFrames extends JFrame {
         mainContentPanel.add(registerPanel, "REGISTRAR");
         mainContentPanel.add(categoryPanel, "CATEGORÍAS");
         mainContentPanel.add(disciplinePanel, "DISCIPLINAS");
-        mainContentPanel.add(createPlaceholderPanel("Módulo de Entrenadores por Categoría"), "ENTRENADORES");
+        mainContentPanel.add(coachPanel, "ENTRENADORES");
         mainContentPanel.add(createPlaceholderPanel("Módulo de Control de Pagos y Cartera"), "PAGOS");
         mainContentPanel.add(createPlaceholderPanel("Módulo de Reportes Financieros"), "REPORTES");
         mainContentPanel.add(createPlaceholderPanel("Configuración y Perfil del Club"), "CONFIGURACIÓN");

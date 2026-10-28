@@ -1,16 +1,20 @@
 package com.creatinaboys;
 
 import com.creatinaboys.repository.FileAthleteRepository;
-import com.creatinaboys.repository.FileDisciplineRepository;
+import com.creatinaboys.repository.FileCoachRepository;
 import com.creatinaboys.repository.IAthleteRepository;
+import com.creatinaboys.repository.ICoachRepository;
 import com.creatinaboys.service.AthleteService;
 import com.creatinaboys.service.BillingService;
+import com.creatinaboys.service.CoachService;
 import com.creatinaboys.service.DisciplineService;
 import com.creatinaboys.service.IBillingService;
+import com.creatinaboys.service.ICoachService;
 import com.creatinaboys.service.IDisciplineService;
 import com.creatinaboys.service.ISaleService;
 import com.creatinaboys.service.SaleService;
 import com.creatinaboys.ui.PrincipalFrames;
+import com.creatinaboys.service.CoachService;
 
 import javax.swing.*;
 
@@ -32,14 +36,17 @@ public class Main {
             // Instanciar repositorios y servicios (DIP / Inyección)
             IAthleteRepository repository = new FileAthleteRepository();
             IBillingService billingService = new BillingService();
+            IDisciplineService disciplineService = new DisciplineService();
 
             AthleteService athleteService = new AthleteService(repository, billingService);
             ISaleService saleService = new SaleService(repository, billingService);
 
-            IDisciplineService disciplineService = new DisciplineService(new FileDisciplineRepository());
+            ICoachRepository coachRepository = new FileCoachRepository();
+            ICoachService coachService = new CoachService(coachRepository);
 
             // Iniciar interfaz gráfica
-            PrincipalFrames frame = new PrincipalFrames(athleteService, saleService, billingService, disciplineService);
+            PrincipalFrames frame = new PrincipalFrames(athleteService, saleService,
+                    billingService, disciplineService, coachService);
             frame.setVisible(true);
         });
     }
