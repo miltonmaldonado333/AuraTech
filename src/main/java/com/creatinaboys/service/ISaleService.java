@@ -21,7 +21,7 @@ import java.util.Map;
 public interface ISaleService {
 
     /**
-     * Registra y procesa el pago de la mensualidad correspondiente a un atleta.
+     * Registra el pago (total o parcial) de la mensualidad del mes actual de un atleta.
      *
      * @param athleteId Documento de identidad único del atleta registrado.
      * @param amount Monto abonado o pagado en pesos colombianos (COP).
@@ -43,7 +43,7 @@ public interface ISaleService {
     double calculateEstimatedMonthlyRevenue();
 
     /**
-     * Calcula el valor total acumulado de ingresos recaudados efectivamente.
+     * Calcula el valor total acumulado de los pagos efectivamente registrados.
      *
      * @return El total de dinero efectivamente recaudado por concepto de mensualidades (COP).
      */
@@ -66,9 +66,18 @@ public interface ISaleService {
     Map<CategoryEnum, Double> getRevenueByCategory();
 
     /**
-     * Retorna el listado de atletas que presentan saldos pendientes o morosidad en el pago de su mensualidad.
+     * Retorna el listado de atletas cuyo pago del mes actual es menor a su mensualidad.
      *
      * @return Una lista de objetos {@link Athlete} con estado de cobro pendiente.
      */
     List<Athlete> getAthletesWithPendingPayment();
+
+    /**
+     * Calcula lo que le falta pagar a un atleta de su mensualidad del mes actual.
+     *
+     * @param athleteId Documento de identidad del atleta.
+     * @return Saldo pendiente en COP; 0 si ya está al día.
+     * @throws AthleteNotFoundException Si no existe un atleta con ese documento.
+     */
+    double getPendingBalance(String athleteId) throws AthleteNotFoundException;
 }

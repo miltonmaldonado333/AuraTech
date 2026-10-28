@@ -9,7 +9,7 @@ import java.util.Optional;
  * Contrato de interfaz para la gestión, consulta y catálogo de disciplinas deportivas del club.
  * <p>
  * Aplica los principios <b>DIP (Inversión de Dependencias)</b> e <b>ISP (Segregación de Interfaces)</b> de SOLID,
- * garantizando que la capa de presentación (GUI Swing) y los servicios de inscripción dependan exclusivamente de esta abstracción[cite: 6].
+ * garantizando que la capa de presentación (GUI Swing) y los servicios de inscripción dependan exclusivamente de esta abstracción.
  * </p>
  * 
  * @author Milton Andrés Maldonado Salcedo
@@ -29,7 +29,7 @@ public interface IDisciplineService {
      * Registra una nueva disciplina deportiva en la oferta del club.
      * <p>
      * Cumple con el principio <b>OCP (Abierto/Cerrado)</b> al permitir extender la oferta deportiva
-     * (ej. Voleibol, Natación) sin modificar los componentes existentes[cite: 1, 6].
+     * (ej. Voleibol, Natación) sin modificar los componentes existentes.
      * </p>
      *
      * @param disciplineName Nombre de la disciplina a registrar.
