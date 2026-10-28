@@ -11,6 +11,7 @@ import com.creatinaboys.ui.panels.AthleteListPanel;
 import com.creatinaboys.ui.panels.AthleteRegisterPanel;
 import com.creatinaboys.ui.panels.CategoryPanel;
 import com.creatinaboys.ui.panels.DisciplinePanel;
+import com.creatinaboys.ui.panels.PaymentPanel;
 import com.creatinaboys.ui.theme.ThemeConstants;
 
 import javax.swing.*;
@@ -38,6 +39,7 @@ public class PrincipalFrames extends JFrame {
     private AthleteListPanel athleteListPanel;
     private CategoryPanel categoryPanel;
     private DisciplinePanel disciplinePanel;
+    private PaymentPanel paymentPanel;
 
     public PrincipalFrames(AthleteService athleteService, ISaleService saleService,
                            IBillingService billingService, IDisciplineService disciplineService) {
@@ -101,6 +103,8 @@ public class PrincipalFrames extends JFrame {
                     categoryPanel.refresh();
                 } else if ("DISCIPLINAS".equals(cardName) && disciplinePanel != null) {
                     disciplinePanel.refresh();
+                } else if ("PAGOS".equals(cardName) && paymentPanel != null) {
+                    paymentPanel.refresh();
                 }
                 cardLayout.show(mainContentPanel, cardName);
             });
@@ -136,6 +140,7 @@ public class PrincipalFrames extends JFrame {
         AthleteRegisterPanel registerPanel = new AthleteRegisterPanel(athleteService);
         categoryPanel = new CategoryPanel(athleteService, billingService, disciplineService);
         disciplinePanel = new DisciplinePanel(athleteService, disciplineService);
+        paymentPanel = new PaymentPanel(athleteService, saleService);
 
         // Paneles Placeholders para las demás secciones
         mainContentPanel.add(createPlaceholderPanel("Bienvenido al Sistema Creatina-Boys"), "INICIO");
@@ -144,7 +149,7 @@ public class PrincipalFrames extends JFrame {
         mainContentPanel.add(categoryPanel, "CATEGORÍAS");
         mainContentPanel.add(disciplinePanel, "DISCIPLINAS");
         mainContentPanel.add(createPlaceholderPanel("Módulo de Entrenadores por Categoría"), "ENTRENADORES");
-        mainContentPanel.add(createPlaceholderPanel("Módulo de Control de Pagos y Cartera"), "PAGOS");
+        mainContentPanel.add(paymentPanel, "PAGOS");
         mainContentPanel.add(createPlaceholderPanel("Módulo de Reportes Financieros"), "REPORTES");
         mainContentPanel.add(createPlaceholderPanel("Configuración y Perfil del Club"), "CONFIGURACIÓN");
 
