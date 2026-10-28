@@ -30,7 +30,7 @@ public class CoachService implements ICoachService {
     /**
      * Constructor con inyección de dependencias para la capa de repositorio.
      *
-     * @param coachRepository Instancia del repositorio de entrenadores (DIP)[cite: 1].
+     * @param coachRepository Instancia del repositorio de entrenadores (DIP).
      */
     public CoachService(ICoachRepository coachRepository) {
         this.coachRepository = Objects.requireNonNull(coachRepository, "El repositorio de entrenadores no puede ser nulo.");
@@ -41,10 +41,7 @@ public class CoachService implements ICoachService {
         if (coach == null) {
             throw new IllegalArgumentException("El entrenador a registrar no puede ser nulo.");
         }
-        Optional<Coach> existing = coachRepository.findById(coach.getId());
-        if (existing.isPresent()) {
-            throw new IllegalArgumentException("Ya existe un entrenador registrado con la identificación: " + coach.getId());
-        }
+        // El repositorio devuelve false si ya existe un entrenador con ese documento.
         return coachRepository.save(coach);
     }
 
