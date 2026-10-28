@@ -1,8 +1,8 @@
 package com.creatinaboys.service;
 
+import com.creatinaboys.exceptions.AthleteNotFoundException;
+import com.creatinaboys.exceptions.InvalidAgeException;
 import com.creatinaboys.model.Athlete;
-import com.creatinaboys.model.Basketballer;
-import com.creatinaboys.model.Footballer;
 import com.creatinaboys.repository.IAthleteRepository;
 
 import java.util.List;
@@ -17,21 +17,20 @@ public class AthleteService {
         this.billingService = billingService;
     }
 
-    public boolean registerFootballer(String id, String fullName, int age, String phone, int jerseyNumber, String playingPosition) {
-        Footballer footballer = new Footballer(id, fullName, age, phone, jerseyNumber, playingPosition);
-        footballer.setCategory(billingService.determineCategory(age));
-        footballer.setMonthlyFee(billingService.calculateFee(age));
-        return repository.save(footballer);
+    /**
+     * Un único método de registro para cualquier Atleta (Cumple OCP, DIP y
+     * SRP). El objeto Atleta ya llega instanciado desde el controlador o la UI.
+     * @param athlete
+     * @return 
+     * @throws com.creatinaboys.exceptions.InvalidAgeException
+     */
+    public boolean registerAthlete(Athlete athlete) throws InvalidAgeException {
+        athlete.setCategory(billingService.determineCategory(athlete.getAge()));
+        athlete.setMonthlyFee(billingService.calculateFee(athlete.getAge()));
+        return repository.save(athlete);
     }
 
-    public boolean registerBasketballer(String id, String fullName, int age, String phone, int jerseyNumber, double height) {
-        Basketballer basketballer = new Basketballer(id, fullName, age, phone, jerseyNumber, height);
-        basketballer.setCategory(billingService.determineCategory(age));
-        basketballer.setMonthlyFee(billingService.calculateFee(age));
-        return repository.save(basketballer);
-    }
-
-    public Athlete findAthlete(String id) {
+    public Athlete findAthlete(String id) throws AthleteNotFoundException {
         return repository.findById(id);
     }
 
@@ -47,15 +46,17 @@ public class AthleteService {
         return repository.findAll().size();
     }
 
-    public long getFootballersCount() {
+    /**
+     * Reemplaza a getFootballersCount() y getBasketballersCount() Permite
+     * contar cualquier clase de Atleta sin modificar este código cuando
+     * agregues más deportes.
+     * @param <T>
+     * @param type
+     * @return 
+     */
+    public <T extends Athlete> long getAthletesCountByType(Class<T> type) {
         return repository.findAll().stream()
-                .filter(a -> a instanceof Footballer)
-                .count();
-    }
-
-    public long getBasketballersCount() {
-        return repository.findAll().stream()
-                .filter(a -> a instanceof Basketballer)
+                .filter(type::isInstance)
                 .count();
     }
 }

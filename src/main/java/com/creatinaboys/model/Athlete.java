@@ -1,6 +1,14 @@
 package com.creatinaboys.model;
 
+import com.creatinaboys.exceptions.InvalidAgeException;
+import com.creatinaboys.service.IBillingService;
+
+/**
+ * Base entity for every athlete registered in the club. Concrete subclasses
+ * represent a specific sports discipline (OCP, LSP).
+ */
 public abstract class Athlete {
+
     private String id;
     private String fullName;
     private int age;
@@ -9,22 +17,46 @@ public abstract class Athlete {
     private double monthlyFee;
     private CategoryEnum category;
 
-    public Athlete(String id, String fullName, int age, String phone, int jerseyNumber) {
-        this.id = id;
-        this.fullName = fullName;
+    protected Athlete(String id, String fullName, int age, String phone, int jerseyNumber) {
+        this.id = requireText(id, "id");
+        this.fullName = requireText(fullName, "fullName");
         this.age = age;
-        this.phone = phone;
+        this.phone = requireText(phone, "phone");
+        if (jerseyNumber < 0) {
+            throw new IllegalArgumentException("jerseyNumber cannot be negative.");
+        }
         this.jerseyNumber = jerseyNumber;
     }
 
-    public abstract void calculateFee();
+    /**
+     * Assigns the category and the monthly fee of the athlete. The pricing
+     * rules are not here: they are delegated to the billing abstraction (DIP),
+     * whose expert is BillingService (GRASP Information Expert). Each
+     * discipline overrides it (polymorphism).
+     * @param billingService
+     * @throws com.creatinaboys.exceptions.InvalidAgeException
+     */
+    public abstract void calculateFee(IBillingService billingService) throws InvalidAgeException;
+
+    /**
+     * Name of the sports discipline (e.g. "Football", "Basketball").
+     * @return 
+     */
+    public abstract String getDiscipline();
+
+    protected static String requireText(String value, String field) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new IllegalArgumentException(field + " cannot be empty.");
+        }
+        return value.trim();
+    }
 
     public String getId() {
         return id;
     }
 
     public void setId(String id) {
-        this.id = id;
+        this.id = requireText(id, "id");
     }
 
     public String getFullName() {
@@ -32,7 +64,7 @@ public abstract class Athlete {
     }
 
     public void setFullName(String fullName) {
-        this.fullName = fullName;
+        this.fullName = requireText(fullName, "fullName");
     }
 
     public int getAge() {
@@ -48,7 +80,7 @@ public abstract class Athlete {
     }
 
     public void setPhone(String phone) {
-        this.phone = phone;
+        this.phone = requireText(phone, "phone");
     }
 
     public int getJerseyNumber() {
@@ -56,6 +88,9 @@ public abstract class Athlete {
     }
 
     public void setJerseyNumber(int jerseyNumber) {
+        if (jerseyNumber < 0) {
+            throw new IllegalArgumentException("jerseyNumber cannot be negative.");
+        }
         this.jerseyNumber = jerseyNumber;
     }
 
@@ -75,6 +110,9 @@ public abstract class Athlete {
         this.category = category;
     }
 
-    
-  
+    @Override
+    public String toString() {
+        return getDiscipline() + "{id='" + id + "', fullName='" + fullName + "', age=" + age
+                + ", category=" + category + ", monthlyFee=" + monthlyFee + "}";
+    }
 }
