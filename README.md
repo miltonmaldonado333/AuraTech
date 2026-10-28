@@ -1,26 +1,55 @@
-# Sistema de Gesti�n del Club Deportivo Creatina-Boys
+# Sistema de Gestión del Club Deportivo Creatina-Boys (AuraTech)
 
-Una aplicación de escritorio en Java estructurada bajo una **Arquitectura de 4 Capas** construida con Apache Maven y Java Swing para la gestión de deportistas, asignaci�n de disciplinas, evaluación de tarifas por edad y pago de mensualidades en el **Club Deportivo Creatina-Boys**.
+Aplicación de escritorio en Java (Swing + Maven) para gestionar deportistas, disciplinas,
+categorías por edad y mensualidades del **Club Deportivo Creatina-Boys**.
+
+Proyecto de aula — Universidad Popular del Cesar (UPC), Programación Computacional III.
 
 ---
 
 ## Características
 
-- **Gestión de Deportistas (CRUD):** Registrar, actualizar, consultar y eliminar deportistas.
-- **Asignación de Disciplina:** Atributos específicos para Futbolistas (posición de juego) y Basquetbolistas (estatura).
-- **Categorización Automática por Edad:** Clasificación y cálculo automático de la tarifa mensual según la edad:
-  - **Niños (5-12 años):** $50.000 COP
-  - **Jovenes (13-17 años):** 70.000 COP
-  - **Adultos (18 + años):** $100.000 COP
-- **Arquitectura de 4 Capas:** Desacoplamiento total entre:
-  1. **Capa de Presentacion / UI:** \com.creatinaboys.Ui\ (Formularios e interfaz Swing).
-  2. **Capa de Servicios / Logica:** \com.creatinaboys.service\ (Reglas de negocio y tarifas).
-  3. **Capa de Repositorio / Persistencia:** \com.creatinaboys.Repository\ (Acceso a datos y archivos).
-  4. **Capa de Modelo / Dominio:** \com.creatinaboys.model\ (Entidades y objetos del sistema).
+- **Gestión de deportistas:** registro y consulta con búsqueda por documento, nombre o disciplina. Persistencia en archivo de texto.
+- **Disciplinas:** atributos propios de cada deporte. Futbolistas (posición de juego) y basquetbolistas (estatura en metros).
+- **Categoría y tarifa automáticas por edad:**
 
----
+  | Categoría | Edad          | Tarifa mensual (COP) |
+  | :-------- | :------------ | :------------------- |
+  | Niños     | 5 a 12 años   | $50.000              |
+  | Jóvenes   | 13 a 17 años  | $70.000              |
+  | Adultos   | 18 años o más | $100.000             |
 
-## Estructura del Proyecto
+  Los menores de 5 años se rechazan con `InvalidAgeException`.
+- **Validación de datos de entrada** centralizada en `DataValidator`.
+- **Persistencia robusta:** archivos UTF-8, escritura mediante archivo temporal con copia `.bak`, y tolerancia a líneas dañadas.
+
+## Estado del proyecto
+
+| Módulo                                   | Estado                                                             |
+| :--------------------------------------- | :----------------------------------------------------------------- |
+| Modelo, excepciones y validación         | Implementado                                                       |
+| Repositorios (atletas, entrenadores, salud) | Implementado                                                    |
+| Servicios de atletas y facturación       | Implementado y conectado a la UI                                   |
+| Servicios de entrenadores, salud y disciplinas | Implementados, **sin pantalla** en la UI                     |
+| Pantallas Deportistas y Registrar        | Implementadas                                                      |
+| Inicio, Categorías, Disciplinas, Entrenadores, Pagos, Reportes, Configuración | Pendiente (pantallas de relleno) |
+| Control de pagos (RF4)                   | Pendiente: aún no se registra el estado de pago de cada mensualidad |
+| Actualizar / eliminar deportistas desde la UI | Pendiente (el repositorio y el servicio ya lo soportan)       |
+
+## Arquitectura de 4 capas
+
+Desacoplamiento entre capas mediante interfaces (DIP), más dos paquetes transversales:
+
+1. **Presentación / UI:** `com.creatinaboys.ui` (ventana principal, paneles y componentes Swing).
+2. **Servicios / Lógica:** `com.creatinaboys.service` (reglas de negocio, tarifas y categorías).
+3. **Repositorio / Persistencia:** `com.creatinaboys.repository` (acceso a datos y archivos).
+4. **Modelo / Dominio:** `com.creatinaboys.model` (entidades y enumerados).
+
+Transversales: `com.creatinaboys.exceptions` (excepciones del dominio) y `com.creatinaboys.validation` (validación de entradas).
+
+Los diagramas están en [`docs/`](docs/).
+
+## Estructura del proyecto
 
 ```text
 AuraTech/
@@ -31,68 +60,53 @@ AuraTech/
 |   |-- analysis.md
 |   |-- class-diagram.md
 |   |-- hierarchy-diagram.md
-|   `-- layers-diagram.md
-|-- src/
-|   `-- main/
-|       `-- java/
-|           `-- com/
-|               `-- creatinaboys/
-|                   |-- model/
-|                   |-- repository/
-|                   |-- service/
-|                   |-- ui/
-|                   `-- Main.java
+|   |-- layers-diagram.md
+|   `-- Proyecto_de_Aula_Creatina_Boys.docx
+|-- src/main/java/com/creatinaboys/
+|   |-- exceptions/
+|   |-- model/
+|   |-- repository/
+|   |-- service/
+|   |-- ui/
+|   |-- validation/
+|   `-- Main.java
 |-- .gitignore
 |-- pom.xml
 |-- README.md
 `-- team.md
----
 ```
 
-## Requisitos Previos e Instalacion
+## Requisitos previos
 
-1. **JDK 17** o superior instalado.
-2. **Apache Maven 3.8+** instalado.
-3. Clonar el repositorio:
-   \\\ash
-   git clone https://github.com/miltonmaldonado333/AuraTech.git
-   cd AuraTech
-   \\\
-4. Compilar y ejecutar la aplicacion:
-   \\\ash
-   mvn clean compile
-   mvn exec:java -Dexec.mainClass="com.creatinaboys.Main"
-   \\\
-   "@
+1. **JDK 17** o superior.
+2. **Apache Maven 3.8+**.
 
-# 2. Actualizar docs/analysis.md en español (4 Capas)
+## Instalación y ejecución
 
-Set-Content -Path "docs\analysis.md" -Value @"
+```bash
+git clone https://github.com/miltonmaldonado333/AuraTech.git
+cd AuraTech
+mvn clean compile
+mvn exec:java
+```
 
-# Documento de Requerimientos y Analisis del Proyecto
+`mvn exec:java` usa la clase principal `com.creatinaboys.Main` configurada en el `pom.xml`.
 
-## 1. Planteamiento del Problema
+## Datos
 
-El Club Deportivo Creatina-Boys actualmente lleva el control de membresias de atletas, inscripciones por disciplina (Futbol y Baloncesto) y cobros mensuales de forma manual. Esto genera una asignacion incorrecta de categorias por edad, inconsistencias en el cobro de tarifas y falta de reportes consolidados.
+Los datos se guardan en la carpeta `data/` junto al lugar desde donde se ejecuta la aplicación
+(se crea automáticamente):
 
-## 2. Reglas de Negocio (Matriz de Tarifas)
+| Archivo                    | Contenido                |
+| :------------------------- | :----------------------- |
+| `data/athletes.txt`        | Deportistas              |
+| `data/coaches.txt`         | Entrenadores             |
+| `data/health_records.txt`  | Fichas de salud y lesiones |
 
-| Categoria   | Rango de Edad | Tarifa Mensual (COP) |
-| :---------- | :------------ | :------------------- |
-| **Niños**   | 5 a 12 años   | $50.000 COP            |
-| **Jovenes** | 13 a 17 años  | $70.000 COP          |
-| **Adultos** | 18+ años      | 110.000 COP            |
+Son archivos de texto UTF-8 con campos separados por `;`. Los caracteres `;`, `#`, `~` y `\` dentro de un
+valor se escapan con `\`. Antes de cada escritura se conserva la versión anterior como `<archivo>.bak`.
+Una línea con formato inválido se omite y se informa por la consola, sin impedir la carga del resto.
 
-## 3. Requerimientos Funcionales (RF)
+## Equipo
 
-- **RF1 - Inscripcion de Deportistas:** El sistema debe permitir crear, consultar, actualizar y eliminar registros de deportistas (Identificacion, Nombre Completo, Edad, Telefono).
-- **RF2 - Asignacion de Disciplina:** El sistema debe permitir asignar deportistas a Futbol o Baloncesto, capturando atributos especificos de cada deporte (ej. Posicion de Juego en Futbol, Estatura en Baloncesto).
-- **RF3 - Evaluacion Automatica de Edad:** El sistema debe determinar automaticamente la categoria de edad del deportista y asignar la tarifa de suscripcion mensual correspondiente.
-- **RF4 - Gestion de Cobros:** El sistema debe realizar el seguimiento del estado de pago de las mensualidades y mostrar tablas de resumen.
-
-## 4. Requerimientos No Funcionales (RNF)
-
-- **RNF1 - Plataforma:** Desarrollado en Java (JDK 17) utilizando Apache Maven para la gestion de construccion.
-- **RNF2 - Interfaz de Usuario:** Construida usando Java Swing (\JFrame\, \JTable\, \JOptionPane\) dentro del paquete \com.creatinaboys.Ui\.
-- **RNF3 - Arquitectura de Software:** Estricto cumplimiento de la **Arquitectura de 4 Capas** (\Ui\, \service\, \Repository\, \model\).
-- **RNF4 - Manejo de Excepciones:** Excepciones personalizadas del dominio para la validacion de datos y errores de repositorio.
+Ver [`team.md`](team.md).
