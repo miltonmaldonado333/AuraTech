@@ -11,7 +11,9 @@ import java.awt.*;
 import java.util.List;
 
 /**
- * Vista de la lista de deportistas con búsqueda y tabla de registros (Mockup 4).
+ * Tabla de consulta de deportistas con botones personalizados de Buscar y Eliminar.
+ * 
+ * @author Milton Andrés Maldonado Salcedo
  */
 public class AthleteListPanel extends JPanel {
 
@@ -28,6 +30,7 @@ public class AthleteListPanel extends JPanel {
 
         initHeader();
         initTable();
+        initFooter();
         loadAthleteData();
     }
 
@@ -44,19 +47,13 @@ public class AthleteListPanel extends JPanel {
 
         txtSearch = new JTextField(25);
         txtSearch.setFont(ThemeConstants.FONT_REGULAR);
-        txtSearch.setPreferredSize(new Dimension(300, 38));
+        txtSearch.setPreferredSize(new Dimension(320, 40));
         txtSearch.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeConstants.BORDER_COLOR, 1, true),
                 BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
 
-        JButton btnSearch = new JButton("Buscar");
-        btnSearch.setFont(ThemeConstants.FONT_BOLD);
-        btnSearch.setForeground(Color.WHITE);
-        btnSearch.setBackground(ThemeConstants.PRIMARY_BLUE);
-        btnSearch.setPreferredSize(new Dimension(100, 38));
-        btnSearch.setFocusPainted(false);
-        btnSearch.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        JButton btnSearch = createCustomButton("Buscar", ThemeConstants.PRIMARY_BLUE, Color.WHITE, ThemeConstants.PRIMARY_HOVER, Color.WHITE, 100);
         btnSearch.addActionListener(e -> filterData(txtSearch.getText().trim()));
 
         searchPanel.add(txtSearch);
@@ -86,7 +83,6 @@ public class AthleteListPanel extends JPanel {
         table.setShowVerticalLines(false);
         table.setGridColor(ThemeConstants.BORDER_COLOR);
 
-        // Centrar y estilizar columnas
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
         table.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
@@ -97,6 +93,17 @@ public class AthleteListPanel extends JPanel {
         scrollPane.getViewport().setBackground(Color.WHITE);
 
         add(scrollPane, BorderLayout.CENTER);
+    }
+
+    private void initFooter() {
+        JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 10));
+        footerPanel.setOpaque(false);
+
+        JButton btnDelete = createCustomButton("Eliminar Seleccionado", ThemeConstants.DANGER_RED, Color.WHITE, ThemeConstants.DANGER_HOVER, Color.WHITE, 180);
+        btnDelete.addActionListener(e -> deleteSelectedAthlete());
+
+        footerPanel.add(btnDelete);
+        add(footerPanel, BorderLayout.SOUTH);
     }
 
     public void loadAthleteData() {
@@ -136,5 +143,83 @@ public class AthleteListPanel extends JPanel {
                         "Activo",
                         "$" + String.format("%,.0f", a.getMonthlyFee())
                 }));
+    }
+
+    private void deleteSelectedAthlete() {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Selecciona un deportista de la tabla para eliminar.", "Ninguna Selección", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String id = (String) tableModel.getValueAt(selectedRow, 0);
+        String name = (String) tableModel.getValueAt(selectedRow, 1);
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "¿Estás seguro de que deseas eliminar a " + name + " (ID: " + id + ")?",
+                "Confirmar Eliminación",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                athleteService.deleteAthlete(id);
+                loadAthleteData();
+                JOptionPane.showMessageDialog(this, "Deportista eliminado correctamente.", "Eliminado", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error al eliminar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private JButton createCustomButton(String text, Color bgNormal, Color fgNormal, Color bgHover, Color fgHover, int width) {
+        JButton btn = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                
+                FontMetrics fm = g2.getFontMetrics();
+                Rectangle bounds = fm.getStringBounds(getText(), g2).getBounds();
+                int x = (getWidth() - bounds.width) / 2;
+                int y = (getHeight() - bounds.height) / 2 + fm.getAscent();
+                
+                g2.setColor(getForeground());
+                g2.setFont(getFont());
+                g2.drawString(getText(), x, y);
+                
+                g2.dispose();
+            }
+        };
+
+        btn.setFont(ThemeConstants.FONT_BOLD);
+        btn.setPreferredSize(new Dimension(width, 40));
+        btn.setBackground(bgNormal);
+        btn.setForeground(fgNormal);
+        btn.setFocusPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                btn.setBackground(bgHover);
+                btn.setForeground(fgHover);
+                btn.repaint();
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                btn.setBackground(bgNormal);
+                btn.setForeground(fgNormal);
+                btn.repaint();
+            }
+        });
+
+        return btn;
     }
 }
