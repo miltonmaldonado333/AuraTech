@@ -13,6 +13,7 @@ import com.creatinaboys.ui.panels.AthleteRegisterPanel;
 import com.creatinaboys.ui.panels.CategoryPanel;
 import com.creatinaboys.ui.panels.CoachPanel;
 import com.creatinaboys.ui.panels.DisciplinePanel;
+import com.creatinaboys.ui.panels.PaymentPanel;
 import com.creatinaboys.ui.theme.ThemeConstants;
 
 import javax.swing.*;
@@ -41,7 +42,11 @@ public class PrincipalFrames extends JFrame {
     private AthleteListPanel athleteListPanel;
     private CategoryPanel categoryPanel;
     private DisciplinePanel disciplinePanel;
+<<<<<<< HEAD
     private CoachPanel coachPanel;
+=======
+    private PaymentPanel paymentPanel;
+>>>>>>> 6510161ed200c84d2417a5b834b6fbadb08c81c9
 
     public PrincipalFrames(AthleteService athleteService, ISaleService saleService,
                            IBillingService billingService, IDisciplineService disciplineService,
@@ -107,8 +112,13 @@ public class PrincipalFrames extends JFrame {
                     categoryPanel.refresh();
                 } else if ("DISCIPLINAS".equals(cardName) && disciplinePanel != null) {
                     disciplinePanel.refresh();
+<<<<<<< HEAD
                 } else if ("ENTRENADORES".equals(cardName) && coachPanel != null) {
                     coachPanel.loadCoaches();
+=======
+                } else if ("PAGOS".equals(cardName) && paymentPanel != null) {
+                    paymentPanel.refresh();
+>>>>>>> 6510161ed200c84d2417a5b834b6fbadb08c81c9
                 }
                 cardLayout.show(mainContentPanel, cardName);
             });
@@ -144,7 +154,11 @@ public class PrincipalFrames extends JFrame {
         AthleteRegisterPanel registerPanel = new AthleteRegisterPanel(athleteService);
         categoryPanel = new CategoryPanel(athleteService, billingService, disciplineService);
         disciplinePanel = new DisciplinePanel(athleteService, disciplineService);
+<<<<<<< HEAD
         coachPanel = new CoachPanel(coachService);
+=======
+        paymentPanel = new PaymentPanel(athleteService, saleService);
+>>>>>>> 6510161ed200c84d2417a5b834b6fbadb08c81c9
 
         // Paneles Placeholders para las demás secciones
         mainContentPanel.add(createPlaceholderPanel("Bienvenido al Sistema Creatina-Boys"), "INICIO");
@@ -152,8 +166,13 @@ public class PrincipalFrames extends JFrame {
         mainContentPanel.add(registerPanel, "REGISTRAR");
         mainContentPanel.add(categoryPanel, "CATEGORÍAS");
         mainContentPanel.add(disciplinePanel, "DISCIPLINAS");
+<<<<<<< HEAD
         mainContentPanel.add(coachPanel, "ENTRENADORES");
         mainContentPanel.add(createPlaceholderPanel("Módulo de Control de Pagos y Cartera"), "PAGOS");
+=======
+        mainContentPanel.add(createPlaceholderPanel("Módulo de Entrenadores por Categoría"), "ENTRENADORES");
+        mainContentPanel.add(paymentPanel, "PAGOS");
+>>>>>>> 6510161ed200c84d2417a5b834b6fbadb08c81c9
         mainContentPanel.add(createPlaceholderPanel("Módulo de Reportes Financieros"), "REPORTES");
         mainContentPanel.add(createPlaceholderPanel("Configuración y Perfil del Club"), "CONFIGURACIÓN");
 
