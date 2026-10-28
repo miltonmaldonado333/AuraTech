@@ -20,20 +20,6 @@ import java.util.stream.Collectors;
 
 /**
  * Implementación concreta del servicio de ventas y gestión financiera para el Club Deportivo Creatina-Boys.
- * <p>
- * Orquesta el registro de pagos, la consolidación de ingresos estimados y reales,
- * y la generación de métricas por disciplina y categoría con Streams y lambdas.
- * </p>
- * <ul>
- *   <li><b>SRP:</b> su única responsabilidad es la lógica financiera y de cobros del club.</li>
- *   <li><b>DIP:</b> depende de las abstracciones {@link IAthleteRepository}, {@link IPaymentRepository} e {@link IBillingService}.</li>
- *   <li><b>GRASP Controller:</b> coordina los casos de uso financieros desde la capa de presentación.</li>
- * </ul>
- * <p>
- * Un pago cubre el mes actual. Se pueden registrar pagos parciales: el deportista queda
- * al día cuando lo pagado en el mes alcanza su mensualidad.
- * </p>
- *
  * @author Milton Andrés Maldonado Salcedo
  * @version 2.0
  */
@@ -43,13 +29,14 @@ public class SaleService implements ISaleService {
     private static final double EPSILON = 0.005;
 
     private final IAthleteRepository athleteRepository;
-    private final IBillingService billingService;
     private final IPaymentRepository paymentRepository;
     private final Clock clock;
 
     /**
      * Constructor original. Los pagos se guardan en {@code data/payments.txt}.
      *
+     * @param athleteRepository
+     * @param billingService
      * @throws NullPointerException Si alguno de los parámetros es {@code null}.
      */
     public SaleService(IAthleteRepository athleteRepository, IBillingService billingService) {
@@ -61,11 +48,15 @@ public class SaleService implements ISaleService {
         this(athleteRepository, billingService, paymentRepository, Clock.systemDefaultZone());
     }
 
-    /** Permite fijar el reloj (útil en pruebas). */
+    /** Permite fijar el reloj.
+     * @param athleteRepository
+     * @param billingService
+     * @param paymentRepository
+     * @param clock */
     public SaleService(IAthleteRepository athleteRepository, IBillingService billingService,
                        IPaymentRepository paymentRepository, Clock clock) {
         this.athleteRepository = Objects.requireNonNull(athleteRepository, "El repositorio de atletas no puede ser nulo.");
-        this.billingService = Objects.requireNonNull(billingService, "El servicio de facturación no puede ser nulo.");
+        Objects.requireNonNull(billingService, "El servicio de facturación no puede ser nulo.");
         this.paymentRepository = Objects.requireNonNull(paymentRepository, "El repositorio de pagos no puede ser nulo.");
         this.clock = Objects.requireNonNull(clock, "El reloj no puede ser nulo.");
     }
@@ -106,7 +97,7 @@ public class SaleService implements ISaleService {
         return Math.max(0.0, athlete.getMonthlyFee() - paid);
     }
 
-    /** {@inheritDoc} Suma la mensualidad de todos los atletas registrados. */
+    /** Suma la mensualidad de todos los atletas registrados. */
     @Override
     public double calculateEstimatedMonthlyRevenue() {
         return athleteRepository.findAll().stream()
@@ -115,7 +106,7 @@ public class SaleService implements ISaleService {
                 .sum();
     }
 
-    /** {@inheritDoc} Suma todos los pagos efectivamente registrados. */
+    /** Suma todos los pagos efectivamente registrados. */
     @Override
     public double calculateTotalCollectedRevenue() {
         return paymentRepository.findAll().stream()
@@ -123,7 +114,7 @@ public class SaleService implements ISaleService {
                 .sum();
     }
 
-    /** {@inheritDoc} */
+   
     @Override
     public Map<String, Double> getRevenueByDiscipline() {
         return athleteRepository.findAll().stream()
@@ -136,7 +127,6 @@ public class SaleService implements ISaleService {
     }
 
     /**
-     * {@inheritDoc}
      * Garantiza que todas las categorías de {@link CategoryEnum} queden inicializadas aunque no tengan atletas.
      */
     @Override
@@ -157,7 +147,6 @@ public class SaleService implements ISaleService {
     }
 
     /**
-     * {@inheritDoc}
      * Un atleta está pendiente si lo pagado en el mes actual es menor que su mensualidad.
      */
     @Override
