@@ -379,9 +379,23 @@ public class PaymentPanel extends JPanel {
             feedback("Selecciona un deportista.", false);
             return;
         }
-        String digits = txtAmount.getText().replaceAll("[^0-9]", "");
-        if (digits.isEmpty()) {
+        String raw = txtAmount.getText().trim();
+        if (raw.isEmpty()) {
             feedback("Escribe el monto a pagar.", false);
+            return;
+        }
+        if (raw.startsWith("-") || raw.startsWith("−")) {
+            warn("No se permiten números negativos.\nIngresa un monto mayor a cero.");
+            return;
+        }
+        // Solo dígitos; se aceptan puntos o comas únicamente como separador de miles (50.000 / 50,000).
+        if (!raw.matches("\\d+|\\d{1,3}([.,]\\d{3})+")) {
+            warn("El monto solo puede contener números.\nNo se permiten letras ni caracteres especiales.");
+            return;
+        }
+        String digits = raw.replaceAll("[.,]", "");
+        if (Double.parseDouble(digits) <= 0) {
+            warn("El monto debe ser mayor a cero.");
             return;
         }
         try {
@@ -401,6 +415,14 @@ public class PaymentPanel extends JPanel {
         } catch (IllegalArgumentException | PersistenceException ex) {
             feedback(ex.getMessage(), false);
         }
+    }
+
+    /** Muestra un aviso de monto inválido y deja el campo listo para corregir. */
+    private void warn(String message) {
+        feedback("Monto no válido.", false);
+        JOptionPane.showMessageDialog(this, message, "Monto no válido", JOptionPane.WARNING_MESSAGE);
+        txtAmount.requestFocusInWindow();
+        txtAmount.selectAll();
     }
 
     private void feedback(String text, boolean ok) {
