@@ -5,9 +5,9 @@ package com.creatinaboys.model;
  * the age ranges and fees are handled by BillingService (Information Expert).
  */
 public enum CategoryEnum {
-    CHILDREN("Children"),
-    YOUTH("Youth"),
-    ADULTS("Adults");
+    CHILDREN("Niño"),
+    YOUTH("Adolecente"),
+    ADULTS("Adulto");
 
     private final String name;
 

@@ -1,6 +1,7 @@
 package com.creatinaboys.service;
 
 import com.creatinaboys.exceptions.PersistenceException;
+import com.creatinaboys.exceptions.ValidationException;
 import com.creatinaboys.model.UserAccount;
 
 import javax.crypto.SecretKeyFactory;
@@ -27,6 +28,10 @@ public class Authservice implements IAuthService {
     private static final int ITERATIONS = 120_000;
     private static final int KEY_BITS = 256;
     private static final int SALT_BYTES = 16;
+
+    private static final int USERNAME_MIN = 3;
+    private static final int USERNAME_MAX = 20;
+    private static final int PASSWORD_MIN = 8;
 
     private final Iuserrepository repository;
     private final SecureRandom random = new SecureRandom();
@@ -56,6 +61,48 @@ public class Authservice implements IAuthService {
         boolean ok = MessageDigest.isEqual(expected, actual) && account != null;
         Arrays.fill(actual, (byte) 0);
         return ok;
+    }
+
+    @Override
+    public void register(String username, char[] password, char[] confirmPassword)
+            throws ValidationException, PersistenceException {
+        try {
+            String user = username == null ? "" : username.trim();
+            if (user.length() < USERNAME_MIN || user.length() > USERNAME_MAX) {
+                throw new ValidationException("El usuario debe tener entre " + USERNAME_MIN + " y "
+                        + USERNAME_MAX + " caracteres.");
+            }
+            if (!user.matches("[A-Za-z0-9._-]+")) {
+                throw new ValidationException("El usuario solo admite letras, números, punto, guion y guion bajo.");
+            }
+            if (password == null || password.length == 0 || confirmPassword == null || confirmPassword.length == 0) {
+                throw new ValidationException("Escriba la contraseña y confírmela.");
+            }
+            if (password.length < PASSWORD_MIN) {
+                throw new ValidationException("La contraseña debe tener al menos " + PASSWORD_MIN + " caracteres.");
+            }
+            if (!hasLetterAndDigit(password)) {
+                throw new ValidationException("La contraseña debe incluir al menos una letra y un número.");
+            }
+            if (!Arrays.equals(password, confirmPassword)) {
+                throw new ValidationException("Las contraseñas no coinciden.");
+            }
+            if (!repository.save(createAccount(user, password))) {
+                throw new ValidationException("Ese usuario ya existe. Elija otro nombre.");
+            }
+        } finally {
+            if (password != null) Arrays.fill(password, '\0');
+            if (confirmPassword != null) Arrays.fill(confirmPassword, '\0');
+        }
+    }
+
+    private static boolean hasLetterAndDigit(char[] password) {
+        boolean letter = false, digit = false;
+        for (char c : password) {
+            if (Character.isLetter(c)) letter = true;
+            else if (Character.isDigit(c)) digit = true;
+        }
+        return letter && digit;
     }
 
     private UserAccount createAccount(String username, char[] password) {

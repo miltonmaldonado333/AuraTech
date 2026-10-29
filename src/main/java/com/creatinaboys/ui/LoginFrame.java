@@ -4,6 +4,7 @@ import com.creatinaboys.exceptions.PersistenceException;
 import com.creatinaboys.service.IAuthService;
 import com.creatinaboys.ui.components.ClubLogo;
 import com.creatinaboys.ui.components.InputBox;
+import com.creatinaboys.ui.components.LinkLabel;
 import com.creatinaboys.ui.components.ModernButton;
 import com.creatinaboys.ui.components.PlaceholderPasswordField;
 import com.creatinaboys.ui.components.PlaceholderTextField;
@@ -33,6 +34,14 @@ public class LoginFrame extends JFrame {
     private final JLabel lblError = new JLabel(" ");
     private final ModernButton btnLogin = new ModernButton("Ingresar", null, ModernButton.Style.PRIMARY, 320);
 
+    private static final Color SUCCESS_GREEN = new Color(22, 163, 74);
+    private static final String CARD_LOGIN = "login";
+    private static final String CARD_REGISTER = "register";
+
+    private final CardLayout cards = new CardLayout();
+    private final JPanel formCards = new JPanel(cards);
+    private final RegisterPanel registerPanel;
+
     private int failedAttempts = 0;
     private Timer lockTimer;
 
@@ -46,9 +55,16 @@ public class LoginFrame extends JFrame {
         setResizable(false);
         setLocationRelativeTo(null);
 
+        registerPanel = new RegisterPanel(authService,
+                username -> showLoginCard(username, "Cuenta creada. Ya puede iniciar sesión."),
+                () -> showLoginCard(null, null));
+
+        formCards.add(buildFormSide(), CARD_LOGIN);
+        formCards.add(registerPanel, CARD_REGISTER);
+
         JPanel root = new JPanel(new GridLayout(1, 2));
         root.add(buildBrandSide());
-        root.add(buildFormSide());
+        root.add(formCards);
         setContentPane(root);
 
         getRootPane().setDefaultButton(btnLogin);   // Enter = Ingresar
@@ -114,9 +130,35 @@ public class LoginFrame extends JFrame {
         p.add(lblError, c);
 
         c.gridy = 4;
-        c.insets = new Insets(0, 0, 0, 0);
+        c.insets = new Insets(0, 0, 14, 0);
         p.add(btnLogin, c);
+
+        c.gridy = 5;
+        c.insets = new Insets(0, 0, 0, 0);
+        p.add(new LinkLabel("¿No tiene cuenta? Regístrese", this::showRegisterCard), c);
         return p;
+    }
+
+    private void showRegisterCard() {
+        registerPanel.reset();
+        cards.show(formCards, CARD_REGISTER);
+        getRootPane().setDefaultButton(registerPanel.getDefaultButton());
+    }
+
+    /** Vuelve al formulario de login; si viene de un registro exitoso, deja el usuario escrito y un aviso. */
+    private void showLoginCard(String username, String info) {
+        cards.show(formCards, CARD_LOGIN);
+        getRootPane().setDefaultButton(btnLogin);
+        txtPassword.setText("");
+        if (username != null) {
+            txtUser.setText(username);
+        }
+        if (info != null) {
+            showInfo(info);
+        } else {
+            lblError.setText(" ");
+        }
+        (username != null ? txtPassword : txtUser).requestFocusInWindow();
     }
 
     private void attemptLogin() {
@@ -203,6 +245,12 @@ public class LoginFrame extends JFrame {
     }
 
     private void showError(String message) {
+        lblError.setForeground(ThemeConstants.DANGER_RED);
+        lblError.setText(message);
+    }
+
+    private void showInfo(String message) {
+        lblError.setForeground(SUCCESS_GREEN);
         lblError.setText(message);
     }
 }
