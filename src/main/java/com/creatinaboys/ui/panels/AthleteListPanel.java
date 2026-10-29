@@ -267,12 +267,14 @@ public class AthleteListPanel extends JPanel {
         if (athleteService == null) {
             filtered = new ArrayList<>();
         } else {
-            String q = txtSearch == null ? "" : txtSearch.getText().trim().toLowerCase();
+            String q = txtSearch == null ? "" : SearchText.normalize(txtSearch.getText());
             filtered = athleteService.getAllAthletes().stream()
                     .filter(a -> q.isEmpty()
-                    || a.getId().toLowerCase().contains(q)
-                    || a.getFullName().toLowerCase().contains(q)
-                    || SpanishLabels.of(a.getDiscipline()).toLowerCase().contains(q))
+                    || SearchText.contains(a.getId(), q)
+                    || SearchText.contains(a.getFullName(), q)
+                    || SearchText.contains(SpanishLabels.of(a.getDiscipline()), q)
+                    || SearchText.contains(a.getCategory() != null
+                            ? SpanishLabels.of(a.getCategory().getName()) : "Sin categoría", q))
                     .collect(Collectors.toList());
         }
         refresh();

@@ -275,13 +275,14 @@ public class CoachPanel extends JPanel {
             return;   // la UI aún se está construyendo
         }
         try {
-            String q = txtSearch.getText().trim().toLowerCase(Locale.ROOT);
+            String q = SearchText.normalize(txtSearch.getText());
             filtered = coachService.getAllCoaches().stream()
                     .filter(c -> q.isEmpty()
-                            || c.getId().toLowerCase(Locale.ROOT).contains(q)
-                            || c.getFullName().toLowerCase(Locale.ROOT).contains(q)
-                            || c.getPhone().toLowerCase(Locale.ROOT).contains(q)
-                            || SpanishLabels.of(c.getDiscipline()).toLowerCase(Locale.ROOT).contains(q))
+                            || SearchText.contains(c.getId(), q)
+                            || SearchText.contains(c.getFullName(), q)
+                            || SearchText.contains(c.getPhone(), q)
+                            || SearchText.contains(SpanishLabels.of(c.getDiscipline()), q)
+                            || SearchText.contains(CoachLabels.categoryLabel(c.getCategory()), q))
                     .collect(Collectors.toList());
         } catch (Exception ex) {
             filtered = new ArrayList<>();
