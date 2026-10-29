@@ -71,6 +71,7 @@ public class Main {
         new LoginFrame(authService, username -> {
             PrincipalFrames frame = frameFactory.get();
             frame.setOnLogout(() -> showLogin(authService, frameFactory));
+            frame.setCurrentUser(username);
             frame.setVisible(true);
         }).setVisible(true);
     }

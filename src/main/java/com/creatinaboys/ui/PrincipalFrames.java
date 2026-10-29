@@ -1,3 +1,4 @@
+
 package com.creatinaboys.ui;
 
 import com.creatinaboys.service.IBillingService;
@@ -13,6 +14,7 @@ import com.creatinaboys.ui.panels.AthleteRegisterPanel;
 import com.creatinaboys.ui.panels.CategoryPanel;
 import com.creatinaboys.ui.panels.CoachPanel;
 import com.creatinaboys.ui.panels.DisciplinePanel;
+import com.creatinaboys.ui.panels.HomePanel;
 import com.creatinaboys.ui.panels.PaymentPanel;
 import com.creatinaboys.ui.panels.ReportsPanel;
 import com.creatinaboys.ui.theme.ThemeConstants;
@@ -40,6 +42,9 @@ public class PrincipalFrames extends JFrame {
     private CardLayout cardLayout;
     private JPanel mainContentPanel;
     private List<SidebarButton> sidebarButtons;
+    private final List<String> menuNames = new ArrayList<>();
+
+    private HomePanel homePanel;
 
     private AthleteListPanel athleteListPanel;
     private CategoryPanel categoryPanel;
@@ -74,6 +79,21 @@ public class PrincipalFrames extends JFrame {
         this.onLogout = onLogout;
     }
 
+    /** Usuario que inició sesión (se muestra en el saludo del Inicio). */
+    public void setCurrentUser(String username) {
+        if (homePanel != null) {
+            homePanel.setUsername(username);
+        }
+    }
+
+    /** Va a una opción del menú lateral por su nombre (ej. "Registrar", "Pagos"). */
+    private void navigateTo(String menuName) {
+        int idx = menuNames.indexOf(menuName);
+        if (idx >= 0) {
+            sidebarButtons.get(idx).doClick();
+        }
+    }
+
     private void initFrame() {
         setTitle("Club Deportivo Creatina-Boys - Sistema de Gestión Integral");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -106,6 +126,7 @@ public class PrincipalFrames extends JFrame {
             String name = menuItems[i];
             SidebarButton btn = new SidebarButton(name);
             sidebarButtons.add(btn);
+            menuNames.add(name);
 
             final String cardName = name.toUpperCase();
             btn.addActionListener(e -> {
@@ -118,6 +139,9 @@ public class PrincipalFrames extends JFrame {
                     //   a -> paymentService...    -> cuando exista el módulo de Pagos
                     athleteService.applyActivationPolicy(new MembershipExpirationPolicy(5));
                     athleteListPanel.loadAthleteData();
+                }
+                if ("INICIO".equals(cardName) && homePanel != null) {
+                    homePanel.refresh();
                 }
                 if ("CATEGORÍAS".equals(cardName) && categoryPanel != null) {
                     categoryPanel.refresh();
@@ -177,8 +201,9 @@ public class PrincipalFrames extends JFrame {
 
         reportsPanel = new ReportsPanel(athleteService, saleService);
 
-        // Paneles Placeholders para las demás secciones
-        mainContentPanel.add(createPlaceholderPanel("Bienvenido al Sistema Creatina-Boys"), "INICIO");
+        homePanel = new HomePanel(athleteService, saleService, coachService, this::navigateTo);
+
+        mainContentPanel.add(homePanel, "INICIO");
         mainContentPanel.add(athleteListPanel, "DEPORTISTAS");
         mainContentPanel.add(registerPanel, "REGISTRAR");
         mainContentPanel.add(categoryPanel, "CATEGORÍAS");
@@ -198,14 +223,5 @@ public class PrincipalFrames extends JFrame {
             btn.setActive(btn == selected);
         }
     }
-
-    private JPanel createPlaceholderPanel(String title) {
-        JPanel p = new JPanel(new GridBagLayout());
-        p.setBackground(ThemeConstants.MAIN_BG);
-        JLabel lbl = new JLabel(title);
-        lbl.setFont(ThemeConstants.FONT_TITLE);
-        lbl.setForeground(ThemeConstants.TEXT_MUTED);
-        p.add(lbl);
-        return p;
-    }
 }
+ 
