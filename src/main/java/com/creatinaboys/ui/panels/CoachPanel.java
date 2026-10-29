@@ -38,9 +38,10 @@ public class CoachPanel extends JPanel {
     private static final String STATUS_INACTIVE = "Inactivo";
 
     private static final int COL_DISCIPLINE = 2;
-    private static final int COL_PHONE = 3;
-    private static final int COL_STATUS = 4;
-    private static final int COL_ACTIONS = 5;
+    private static final int COL_CATEGORY = 3;
+    private static final int COL_PHONE = 4;
+    private static final int COL_STATUS = 5;
+    private static final int COL_ACTIONS = 6;
 
     private static final int PAGE_SIZE = 5;
     private static final int ICON_SIZE = 20;
@@ -146,7 +147,7 @@ public class CoachPanel extends JPanel {
     }
 
     private JComponent buildTable() {
-        String[] columns = {"ID", "Nombre", "Disciplina", "Teléfono", "Estado", "Acciones"};
+        String[] columns = {"ID", "Nombre", "Disciplina", "Categoría", "Teléfono", "Estado", "Acciones"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int col) {
@@ -188,6 +189,8 @@ public class CoachPanel extends JPanel {
         table.getColumnModel().getColumn(COL_DISCIPLINE).setCellRenderer(new IconTextRenderer(v ->
                 new VectorIcon(Type.BALL, 18,
                         "Baloncesto".equals(v) ? new Color(234, 88, 12) : new Color(22, 101, 52))));
+        table.getColumnModel().getColumn(COL_CATEGORY).setCellRenderer(new IconTextRenderer(v ->
+                new VectorIcon(Type.TAG, 16, ThemeConstants.TEXT_MUTED)));
         table.getColumnModel().getColumn(COL_PHONE).setCellRenderer(new IconTextRenderer(v ->
                 new VectorIcon(Type.PHONE, 16, ThemeConstants.TEXT_MUTED)));
 
@@ -217,7 +220,7 @@ public class CoachPanel extends JPanel {
             }
         });
 
-        int[] widths = {110, 210, 140, 150, 120, 110};
+        int[] widths = {110, 200, 130, 120, 140, 110, 100};
         for (int i = 0; i < widths.length; i++) {
             table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
         }
@@ -307,6 +310,7 @@ public class CoachPanel extends JPanel {
                     c.getId(),
                     c.getFullName(),
                     SpanishLabels.of(c.getDiscipline()),
+                    CoachLabels.categoryLabel(c.getCategory()),
                     c.getPhone().isEmpty() ? "—" : c.getPhone(),
                     c.isActive() ? STATUS_ACTIVE : STATUS_INACTIVE,
                     ""
