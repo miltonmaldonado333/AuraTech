@@ -1,6 +1,7 @@
 package com.creatinaboys.ui.panels;
 
 import com.creatinaboys.model.Athlete;
+import com.creatinaboys.model.AthleteKey;
 import com.creatinaboys.model.Basketballer;
 import com.creatinaboys.model.Footballer;
 import com.creatinaboys.model.Payment;
@@ -32,7 +33,8 @@ import java.util.stream.Collectors;
 
 /**
  * Lista moderna de deportistas con buscador, tabla con insignias de estado y
- * paginación.
+ * paginación. Cada fila es un registro (documento + disciplina), identificado
+ * por su AthleteKey.
  *
  * @author Milton Andrés Maldonado Salcedo
  */
@@ -60,6 +62,8 @@ public class AthleteListPanel extends JPanel {
     private JPanel paginationPanel;
 
     private List<Athlete> filtered = new ArrayList<>();
+    /** Deportistas de la página visible, en el mismo orden que las filas de la tabla. */
+    private List<Athlete> pageRows = new ArrayList<>();
     private int currentPage = 1;
 
     // Panel de detalle del deportista seleccionado
@@ -67,7 +71,7 @@ public class AthleteListPanel extends JPanel {
     private final JLabel dName = detailTitle();
     private final JLabel dStatus = new JLabel();
     private final JPanel dBody = new JPanel();
-    private String selectedId;
+    private AthleteKey selectedKey;
     private boolean refreshing;
 
     public AthleteListPanel(AthleteService athleteService) {
@@ -321,10 +325,11 @@ public class AthleteListPanel extends JPanel {
         int from = (currentPage - 1) * PAGE_SIZE;
         int to = Math.min(from + PAGE_SIZE, total);
 
+        pageRows = new ArrayList<>(filtered.subList(from, to));
+
         refreshing = true;
         tableModel.setRowCount(0);
-        for (int i = from; i < to; i++) {
-            Athlete a = filtered.get(i);
+        for (Athlete a : pageRows) {
             tableModel.addRow(new Object[]{
                 a.getId(),
                 a.getFullName(),
@@ -435,14 +440,19 @@ public class AthleteListPanel extends JPanel {
         return wrap;
     }
 
+    /** Deportista de la fila indicada, o null si la fila no es válida. */
+    private Athlete athleteAtRow(int row) {
+        return (row >= 0 && row < pageRows.size()) ? pageRows.get(row) : null;
+    }
+
     private void onSelectionChanged() {
-        int row = table.getSelectedRow();
-        if (row < 0) {
-            selectedId = null;
+        Athlete a = athleteAtRow(table.getSelectedRow());
+        if (a == null) {
+            selectedKey = null;
             setDetailVisible(false);
         } else {
-            selectedId = String.valueOf(tableModel.getValueAt(row, 0));
-            showDetail(selectedId);
+            selectedKey = a.getKey();
+            showDetail(selectedKey);
         }
         revalidate();
         repaint();
@@ -450,22 +460,22 @@ public class AthleteListPanel extends JPanel {
 
     /** Tras recargar la tabla, vuelve a marcar al deportista seleccionado si sigue en la página. */
     private void restoreSelection() {
-        if (selectedId == null) {
+        if (selectedKey == null) {
             return;
         }
-        for (int i = 0; i < tableModel.getRowCount(); i++) {
-            if (selectedId.equals(String.valueOf(tableModel.getValueAt(i, 0)))) {
+        for (int i = 0; i < pageRows.size(); i++) {
+            if (selectedKey.equals(pageRows.get(i).getKey())) {
                 table.setRowSelectionInterval(i, i);
-                showDetail(selectedId);
+                showDetail(selectedKey);
                 return;
             }
         }
-        selectedId = null;
+        selectedKey = null;
         setDetailVisible(false);
     }
 
-    private void showDetail(String id) {
-        Athlete a = filtered.stream().filter(x -> x.getId().equals(id)).findFirst().orElse(null);
+    private void showDetail(AthleteKey key) {
+        Athlete a = filtered.stream().filter(x -> x.getKey().equals(key)).findFirst().orElse(null);
         if (a == null) {
             setDetailVisible(false);
             return;
@@ -500,15 +510,16 @@ public class AthleteListPanel extends JPanel {
         addSection("PAGOS");
         addRow("Mensualidad", Money.cop(a.getMonthlyFee()));
         if (saleService != null) {
-            Map<String, Double> paidMap = saleService.getPaidThisMonthByAthlete();
-            double paid = paidMap.getOrDefault(a.getId(), 0.0);
+            Map<AthleteKey, Double> paidMap = saleService.getPaidThisMonthByAthlete();
+            double paid = paidMap.getOrDefault(a.getKey(), 0.0);
             PaymentStatusEnum st = PaymentStatusEnum.of(a.getMonthlyFee(), paid);
             addRow("Pagado este mes", Money.cop(paid));
             addRow("Saldo pendiente", Money.cop(Math.max(0, a.getMonthlyFee() - paid)));
             addRow("Estado del mes", st.getLabel());
 
+            // Solo los pagos de este registro (documento + disciplina)
             List<Payment> mine = saleService.getPaymentHistory().stream()
-                    .filter(p -> p.getAthleteId().equals(a.getId()))
+                    .filter(p -> p.belongsTo(a.getKey()))
                     .limit(5).collect(Collectors.toList());
             addSection("ÚLTIMOS PAGOS");
             if (mine.isEmpty()) {
@@ -566,48 +577,43 @@ public class AthleteListPanel extends JPanel {
 
     // ------------------------------------------------------------------ Acciones
     private void toggleSelectedStatus() {
-        int row = table.getSelectedRow();
-        if (row == -1) {
+        Athlete a = athleteAtRow(table.getSelectedRow());
+        if (a == null) {
             JOptionPane.showMessageDialog(this, "Selecciona un deportista de la tabla para cambiar su estado.",
                     "Ninguna Selección", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        String id = String.valueOf(tableModel.getValueAt(row, 0));
-        String name = String.valueOf(tableModel.getValueAt(row, 1));
-        boolean currentlyActive = STATUS_ACTIVE.equals(tableModel.getValueAt(row, COL_STATUS));
-
-        String message = currentlyActive
-                ? "¿Deseas desactivar a " + name + "?"
-                : "¿Deseas activar a " + name + "?\nSi su mensualidad está vencida, se renovará por 1 mes.";
+        String label = a.getFullName() + " (" + SpanishLabels.of(a.getDiscipline()) + ")";
+        String message = a.isActive()
+                ? "¿Deseas desactivar a " + label + "?"
+                : "¿Deseas activar a " + label + "?\nSi su mensualidad está vencida, se renovará por 1 mes.";
 
         int confirm = JOptionPane.showConfirmDialog(this, message,
                 "Cambiar Estado", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
-            athleteService.toggleAthleteStatus(id);
+            athleteService.toggleAthleteStatus(a.getKey());
             applyFilterKeepingPage();
         }
     }
 
     private void deleteSelectedAthlete() {
-        int row = table.getSelectedRow();
-        if (row == -1) {
+        Athlete a = athleteAtRow(table.getSelectedRow());
+        if (a == null) {
             JOptionPane.showMessageDialog(this, "Selecciona un deportista de la tabla para eliminar.",
                     "Ninguna Selección", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        String id = String.valueOf(tableModel.getValueAt(row, 0));
-        String name = String.valueOf(tableModel.getValueAt(row, 1));
-
         int confirm = JOptionPane.showConfirmDialog(this,
-                "¿Estás seguro de que deseas eliminar a " + name + " (ID: " + id + ")?",
+                "¿Estás seguro de que deseas eliminar a " + a.getFullName()
+                        + " (ID: " + a.getId() + ") de " + SpanishLabels.of(a.getDiscipline()) + "?",
                 "Confirmar Eliminación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
             try {
-                athleteService.deleteAthlete(id);
+                athleteService.deleteAthlete(a.getKey());
                 applyFilterKeepingPage();
                 JOptionPane.showMessageDialog(this, "Deportista eliminado correctamente.",
                         "Eliminado", JOptionPane.INFORMATION_MESSAGE);

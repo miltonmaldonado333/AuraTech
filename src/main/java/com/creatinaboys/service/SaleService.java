@@ -2,6 +2,7 @@ package com.creatinaboys.service;
 
 import com.creatinaboys.exceptions.AthleteNotFoundException;
 import com.creatinaboys.model.Athlete;
+import com.creatinaboys.model.AthleteKey;
 import com.creatinaboys.model.CategoryEnum;
 import com.creatinaboys.model.Payment;
 import com.creatinaboys.repository.FilePaymentRepository;
@@ -11,6 +12,8 @@ import com.creatinaboys.repository.IPaymentRepository;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -20,42 +23,35 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Implementación concreta del servicio de ventas y gestión financiera para el Club Deportivo Creatina-Boys.
+ * Servicio de ventas y gestión financiera para el Club Deportivo Creatina-Boys.
+ * Un registro de deportista se identifica por documento + disciplina
+ * (AthleteKey): los saldos y pagos se calculan por registro.
+ *
  * @author Milton Andrés Maldonado Salcedo
- * @version 2.0
+ * @version 3.0
  */
 public class SaleService implements ISaleService {
 
-    /** Tolerancia para comparar montos en pesos con decimales. */
+    /**
+     * Tolerancia para comparar montos en pesos con decimales.
+     */
     private static final double EPSILON = 0.005;
 
     private final IAthleteRepository athleteRepository;
     private final IPaymentRepository paymentRepository;
     private final Clock clock;
 
-    /**
-     * Constructor original. Los pagos se guardan en {@code data/payments.txt}.
-     *
-     * @param athleteRepository
-     * @param billingService
-     * @throws NullPointerException Si alguno de los parámetros es {@code null}.
-     */
     public SaleService(IAthleteRepository athleteRepository, IBillingService billingService) {
         this(athleteRepository, billingService, new FilePaymentRepository());
     }
 
     public SaleService(IAthleteRepository athleteRepository, IBillingService billingService,
-                       IPaymentRepository paymentRepository) {
+            IPaymentRepository paymentRepository) {
         this(athleteRepository, billingService, paymentRepository, Clock.systemDefaultZone());
     }
 
-    /** Permite fijar el reloj.
-     * @param athleteRepository
-     * @param billingService
-     * @param paymentRepository
-     * @param clock */
     public SaleService(IAthleteRepository athleteRepository, IBillingService billingService,
-                       IPaymentRepository paymentRepository, Clock clock) {
+            IPaymentRepository paymentRepository, Clock clock) {
         this.athleteRepository = Objects.requireNonNull(athleteRepository, "El repositorio de atletas no puede ser nulo.");
         Objects.requireNonNull(billingService, "El servicio de facturación no puede ser nulo.");
         this.paymentRepository = Objects.requireNonNull(paymentRepository, "El repositorio de pagos no puede ser nulo.");
@@ -63,24 +59,26 @@ public class SaleService implements ISaleService {
     }
 
     /**
-     * {@inheritDoc}
-     * Valida la existencia del atleta y registra el pago (total o parcial) en el mes actual.
+     * Valida la existencia del registro y guarda el pago (total o parcial) del
+     * mes actual, asociado a la disciplina del deportista.
      *
-     * @throws IllegalArgumentException Si {@code athleteId} es nulo/vacío o el monto es menor o igual a cero.
-     * @throws AthleteNotFoundException Si el documento no coincide con ningún atleta.
+     * @throws IllegalArgumentException Si la clave es nula o el monto es menor
+     * o igual a cero.
+     * @throws AthleteNotFoundException Si no existe el registro (documento +
+     * disciplina).
      */
     @Override
-    public boolean processMonthlyPayment(String athleteId, double amount) throws AthleteNotFoundException {
-        if (athleteId == null || athleteId.trim().isEmpty()) {
-            throw new IllegalArgumentException("El ID del atleta es requerido para procesar el pago.");
+    public boolean processMonthlyPayment(AthleteKey key, double amount) throws AthleteNotFoundException {
+        if (key == null) {
+            throw new IllegalArgumentException("El deportista es requerido para procesar el pago.");
         }
         if (Double.isNaN(amount) || Double.isInfinite(amount) || amount <= 0) {
             throw new IllegalArgumentException("El monto del pago debe ser mayor a cero.");
         }
 
-        Athlete athlete = athleteRepository.findById(athleteId.trim());
+        Athlete athlete = athleteRepository.findByKey(key);
         double balance = Math.max(0.0,
-                athlete.getMonthlyFee() - paidThisMonthByAthlete().getOrDefault(athlete.getId(), 0.0));
+                athlete.getMonthlyFee() - paidThisMonth().getOrDefault(athlete.getKey(), 0.0));
 
         if (balance <= EPSILON) {
             throw new IllegalArgumentException("La mensualidad de este mes ya está pagada.");
@@ -90,7 +88,8 @@ public class SaleService implements ISaleService {
                     "El monto ($%,.0f) supera el saldo pendiente ($%,.0f).", amount, balance));
         }
 
-        Payment payment = new Payment(athlete.getId(), amount, LocalDate.now(clock), currentPeriod());
+        Payment payment = new Payment(athlete.getId(), amount, LocalDate.now(clock),
+                currentPeriod(), athlete.getDiscipline());
         boolean saved = paymentRepository.save(payment);
 
         // Si el pago completa la mensualidad, se extiende la afiliación un mes y queda activo.
@@ -104,21 +103,21 @@ public class SaleService implements ISaleService {
     }
 
     /**
-     * Saldo pendiente del mes actual para un deportista (0 si ya está al día).
-     *
-     * @throws AthleteNotFoundException Si el atleta no existe.
+     * Saldo pendiente del mes actual para un registro (0 si ya está al día).
      */
     @Override
-    public double getPendingBalance(String athleteId) throws AthleteNotFoundException {
-        if (athleteId == null || athleteId.trim().isEmpty()) {
-            throw new IllegalArgumentException("El ID del atleta es requerido.");
+    public double getPendingBalance(AthleteKey key) throws AthleteNotFoundException {
+        if (key == null) {
+            throw new IllegalArgumentException("El deportista es requerido.");
         }
-        Athlete athlete = athleteRepository.findById(athleteId.trim());
-        double paid = paidThisMonthByAthlete().getOrDefault(athlete.getId(), 0.0);
+        Athlete athlete = athleteRepository.findByKey(key);
+        double paid = paidThisMonth().getOrDefault(athlete.getKey(), 0.0);
         return Math.max(0.0, athlete.getMonthlyFee() - paid);
     }
 
-    /** Suma la mensualidad de todos los atletas registrados. */
+    /**
+     * Suma la mensualidad de todos los registros.
+     */
     @Override
     public double calculateEstimatedMonthlyRevenue() {
         return athleteRepository.findAll().stream()
@@ -127,7 +126,9 @@ public class SaleService implements ISaleService {
                 .sum();
     }
 
-    /** Suma todos los pagos efectivamente registrados. */
+    /**
+     * Suma todos los pagos efectivamente registrados.
+     */
     @Override
     public double calculateTotalCollectedRevenue() {
         return paymentRepository.findAll().stream()
@@ -135,7 +136,6 @@ public class SaleService implements ISaleService {
                 .sum();
     }
 
-   
     @Override
     public Map<String, Double> getRevenueByDiscipline() {
         return athleteRepository.findAll().stream()
@@ -148,7 +148,8 @@ public class SaleService implements ISaleService {
     }
 
     /**
-     * Garantiza que todas las categorías de {@link CategoryEnum} queden inicializadas aunque no tengan atletas.
+     * Garantiza que todas las categorías queden inicializadas aunque no tengan
+     * atletas.
      */
     @Override
     public Map<CategoryEnum, Double> getRevenueByCategory() {
@@ -168,32 +169,38 @@ public class SaleService implements ISaleService {
     }
 
     /**
-     * Un atleta está pendiente si lo pagado en el mes actual es menor que su mensualidad.
+     * Un registro está pendiente si lo pagado en el mes actual es menor que su
+     * mensualidad.
      */
     @Override
     public List<Athlete> getAthletesWithPendingPayment() {
-        Map<String, Double> paid = paidThisMonthByAthlete();
+        Map<AthleteKey, Double> paid = paidThisMonth();
         return athleteRepository.findAll().stream()
                 .filter(Objects::nonNull)
-                .filter(a -> paid.getOrDefault(a.getId(), 0.0) + EPSILON < a.getMonthlyFee())
+                .filter(a -> paid.getOrDefault(a.getKey(), 0.0) + EPSILON < a.getMonthlyFee())
                 .collect(Collectors.toList());
     }
 
     @Override
-    public Map<String, Double> getPaidThisMonthByAthlete() {
-        return paidThisMonthByAthlete();
+    public Map<AthleteKey, Double> getPaidThisMonthByAthlete() {
+        return paidThisMonth();
     }
 
     @Override
     public List<Payment> getPaymentHistory() {
-        return paymentRepository.findAll().stream()
-                .sorted(Comparator.comparing(Payment::getPaymentDate).reversed())
-                .collect(Collectors.toList());
+        List<Payment> all = new ArrayList<>(paymentRepository.findAll());
+        Collections.reverse(all); // el último guardado primero
+        all.sort(Comparator.comparing(Payment::getPaymentDate).reversed()); // estable: respeta el desempate
+        return all;
     }
 
-    /** Atletas pertenecientes a una disciplina (ej. "Football", "Basketball"). */
+    /**
+     * Atletas pertenecientes a una disciplina (ej. "Football", "Basketball").
+     */
     public List<Athlete> getAthletesByDiscipline(String discipline) {
-        if (discipline == null) return List.of();
+        if (discipline == null) {
+            return List.of();
+        }
 
         return athleteRepository.findAll().stream()
                 .filter(Objects::nonNull)
@@ -201,9 +208,13 @@ public class SaleService implements ISaleService {
                 .collect(Collectors.toList());
     }
 
-    /** Atletas pertenecientes a una categoría de edad. */
+    /**
+     * Atletas pertenecientes a una categoría de edad.
+     */
     public List<Athlete> getAthletesByCategory(CategoryEnum category) {
-        if (category == null) return List.of();
+        if (category == null) {
+            return List.of();
+        }
 
         return athleteRepository.findAll().stream()
                 .filter(Objects::nonNull)
@@ -215,14 +226,25 @@ public class SaleService implements ISaleService {
         return YearMonth.now(clock);
     }
 
-    /** Total pagado en el mes actual, agrupado por documento del atleta. */
-    private Map<String, Double> paidThisMonthByAthlete() {
+    /**
+     * Total pagado en el mes actual por registro. La pertenencia la decide
+     * Payment.belongsTo (Information Expert): un pago con disciplina cuenta
+     * solo para ese registro; uno antiguo sin disciplina cuenta para el
+     * documento.
+     */
+    private Map<AthleteKey, Double> paidThisMonth() {
         YearMonth period = currentPeriod();
-        Map<String, Double> paid = new HashMap<>();
-        for (Payment p : paymentRepository.findAll()) {
-            if (period.equals(p.getPeriod())) {
-                paid.merge(p.getAthleteId(), p.getAmount(), Double::sum);
-            }
+        List<Payment> thisMonth = paymentRepository.findAll().stream()
+                .filter(p -> period.equals(p.getPeriod()))
+                .collect(Collectors.toList());
+
+        Map<AthleteKey, Double> paid = new HashMap<>();
+        for (Athlete a : athleteRepository.findAll()) {
+            double sum = thisMonth.stream()
+                    .filter(p -> p.belongsTo(a.getKey()))
+                    .mapToDouble(Payment::getAmount)
+                    .sum();
+            paid.put(a.getKey(), sum);
         }
         return paid;
     }

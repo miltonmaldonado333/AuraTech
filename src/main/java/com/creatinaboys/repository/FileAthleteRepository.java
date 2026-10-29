@@ -3,6 +3,7 @@ package com.creatinaboys.repository;
 import com.creatinaboys.exceptions.AthleteNotFoundException;
 import com.creatinaboys.exceptions.PersistenceException;
 import com.creatinaboys.model.Athlete;
+import com.creatinaboys.model.AthleteKey;
 import com.creatinaboys.model.Basketballer;
 import com.creatinaboys.model.Footballer;
 
@@ -42,14 +43,18 @@ public class FileAthleteRepository implements IAthleteRepository {
                 .register(Basketballer.class, new BasketballerParser());
     }
 
-    /** Guarda un atleta nuevo. Devuelve false (sin modificar nada) si ya existe uno con ese id. */
+    /**
+     * Guarda un atleta nuevo. Devuelve false (sin modificar nada) si ya existe
+     * un registro con la misma clave (documento + disciplina).
+     */
     @Override
     public boolean save(Athlete athlete) {
         if (athlete == null) {
             throw new IllegalArgumentException("athlete cannot be null.");
         }
         List<Athlete> athletes = findAll();
-        if (athletes.stream().anyMatch(a -> a.getId().equals(athlete.getId()))) {
+        AthleteKey key = athlete.getKey();
+        if (athletes.stream().anyMatch(a -> a.getKey().equals(key))) {
             return false;
         }
         athletes.add(athlete);
@@ -58,11 +63,23 @@ public class FileAthleteRepository implements IAthleteRepository {
     }
 
     @Override
-    public Athlete findById(String id) throws AthleteNotFoundException {
+    public Athlete findByKey(AthleteKey key) throws AthleteNotFoundException {
         return findAll().stream()
-                .filter(a -> a.getId().equals(id))
+                .filter(a -> a.getKey().equals(key))
                 .findFirst()
-                .orElseThrow(() -> new AthleteNotFoundException(id));
+                .orElseThrow(() -> new AthleteNotFoundException(key.toString()));
+    }
+
+    /** Todos los registros de una misma persona (uno por disciplina). */
+    @Override
+    public List<Athlete> findById(String id) {
+        List<Athlete> result = new ArrayList<>();
+        for (Athlete a : findAll()) {
+            if (a.getId().equals(id)) {
+                result.add(a);
+            }
+        }
+        return result;
     }
 
     /**
@@ -90,30 +107,31 @@ public class FileAthleteRepository implements IAthleteRepository {
     }
 
     @Override
-    public boolean deleteById(String id) {
+    public boolean deleteByKey(AthleteKey key) {
         List<Athlete> athletes = findAll();
-        boolean removed = athletes.removeIf(a -> a.getId().equals(id));
+        boolean removed = athletes.removeIf(a -> a.getKey().equals(key));
         if (removed) {
             saveAll(athletes);
         }
         return removed;
     }
 
-    /** Reemplaza el atleta almacenado que tenga el mismo id. */
+    /** Reemplaza el atleta almacenado que tenga la misma clave (documento + disciplina). */
     @Override
     public boolean update(Athlete athlete) throws AthleteNotFoundException {
         if (athlete == null) {
             throw new IllegalArgumentException("athlete cannot be null.");
         }
+        AthleteKey key = athlete.getKey();
         List<Athlete> athletes = findAll();
         for (int i = 0; i < athletes.size(); i++) {
-            if (athletes.get(i).getId().equals(athlete.getId())) {
+            if (athletes.get(i).getKey().equals(key)) {
                 athletes.set(i, athlete);
                 saveAll(athletes);
                 return true;
             }
         }
-        throw new AthleteNotFoundException(athlete.getId());
+        throw new AthleteNotFoundException(key.toString());
     }
 
     private void saveAll(List<Athlete> athletes) {

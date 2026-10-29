@@ -225,4 +225,8 @@ public abstract class Athlete {
                 + ", category=" + category + ", monthlyFee=" + monthlyFee
                 + ", active=" + active + ", paidUntil=" + paidUntil + "}";
     }
+    
+    public AthleteKey getKey() {
+    return new AthleteKey(getId(), getDiscipline());
+    }
 }

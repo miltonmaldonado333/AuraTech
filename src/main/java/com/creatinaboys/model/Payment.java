@@ -4,7 +4,8 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 
 /**
- * Pago (total o parcial) de la mensualidad de un deportista.
+ * Pago (total o parcial) de la mensualidad de un registro de deportista
+ * (documento + disciplina).
  * Es inmutable: un pago registrado no se modifica.
  */
 public class Payment {
@@ -13,8 +14,11 @@ public class Payment {
     private final double amount;
     private final LocalDate paymentDate;
     private final YearMonth period;
+    /** Disciplina del registro al que pertenece el pago. "" = pago antiguo sin disciplina. */
+    private final String discipline;
 
-    public Payment(String athleteId, double amount, LocalDate paymentDate, YearMonth period) {
+    public Payment(String athleteId, double amount, LocalDate paymentDate,
+                   YearMonth period, String discipline) {
         if (athleteId == null || athleteId.isBlank()) {
             throw new IllegalArgumentException("El ID del atleta es obligatorio para registrar un pago");
         }
@@ -34,6 +38,12 @@ public class Payment {
         this.amount = amount;
         this.paymentDate = paymentDate;
         this.period = period;
+        this.discipline = discipline == null ? "" : discipline.trim();
+    }
+
+    /** Pago sin disciplina (compatibilidad con código y datos anteriores). */
+    public Payment(String athleteId, double amount, LocalDate paymentDate, YearMonth period) {
+        this(athleteId, amount, paymentDate, period, "");
     }
 
     public String getAthleteId() { return athleteId; }
@@ -45,9 +55,21 @@ public class Payment {
     /** Mes de la mensualidad que cubre el pago. */
     public YearMonth getPeriod() { return period; }
 
+    /** Disciplina del registro pagado; vacía en pagos antiguos. */
+    public String getDiscipline() { return discipline; }
+
+    /**
+     * Information Expert: el pago sabe a qué registro pertenece.
+     * Un pago antiguo (sin disciplina) cuenta para cualquier registro de ese documento.
+     */
+    public boolean belongsTo(AthleteKey key) {
+        return athleteId.equals(key.id())
+                && (discipline.isEmpty() || discipline.equals(key.discipline()));
+    }
+
     @Override
     public String toString() {
-        return "Payment{athleteId='" + athleteId + "', amount=" + amount
-                + ", date=" + paymentDate + ", period=" + period + "}";
+        return "Payment{athleteId='" + athleteId + "', discipline='" + discipline
+                + "', amount=" + amount + ", date=" + paymentDate + ", period=" + period + "}";
     }
 }

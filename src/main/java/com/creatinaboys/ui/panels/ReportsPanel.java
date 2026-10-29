@@ -15,6 +15,7 @@ import com.creatinaboys.ui.components.ShareBar;
 import com.creatinaboys.ui.components.SpanishLabels;
 import com.creatinaboys.ui.components.VectorIcon.Type;
 import com.creatinaboys.ui.theme.ThemeConstants;
+import com.creatinaboys.model.AthleteKey;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -27,11 +28,11 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Pantalla de Reportes financieros: indicadores del mes, ingresos proyectados por
- * disciplina y por categoría, cartera pendiente y recaudo mes a mes.
+ * Pantalla de Reportes financieros: indicadores del mes, ingresos proyectados
+ * por disciplina y por categoría, cartera pendiente y recaudo mes a mes.
  * <p>
- * Solo lee datos: toda la lógica de cálculo vive en {@link ISaleService}
- * y {@link AthleteService}; esta clase únicamente los presenta.
+ * Solo lee datos: toda la lógica de cálculo vive en {@link ISaleService} y
+ * {@link AthleteService}; esta clase únicamente los presenta.
  * </p>
  */
 public class ReportsPanel extends JPanel {
@@ -91,7 +92,6 @@ public class ReportsPanel extends JPanel {
     }
 
     // ------------------------------------------------------------------ Construcción
-
     private JComponent buildHeader() {
         JPanel header = new JPanel();
         header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
@@ -198,12 +198,13 @@ public class ReportsPanel extends JPanel {
     }
 
     // ------------------------------------------------------------------ Datos
-
-    /** Vuelve a leer los datos. Se llama cada vez que se muestra la pantalla. */
+    /**
+     * Vuelve a leer los datos. Se llama cada vez que se muestra la pantalla.
+     */
     public void refresh() {
         try {
             List<Athlete> athletes = athleteService.getAllAthletes();
-            Map<String, Double> paid = saleService.getPaidThisMonthByAthlete();
+            Map<AthleteKey, Double> paid = saleService.getPaidThisMonthByAthlete();
 
             lblError.setText(" ");
             reloadStats(athletes, paid);
@@ -215,11 +216,11 @@ public class ReportsPanel extends JPanel {
         }
     }
 
-    private void reloadStats(List<Athlete> athletes, Map<String, Double> paid) {
+    private void reloadStats(List<Athlete> athletes, Map<AthleteKey, Double> paid) {
         double projected = saleService.calculateEstimatedMonthlyRevenue();
         double collected = 0, pending = 0;
         for (Athlete a : athletes) {
-            double p = paid.getOrDefault(a.getId(), 0.0);
+            double p = paid.getOrDefault(a.getKey(), 0.0);
             collected += Math.min(p, a.getMonthlyFee());
             pending += Math.max(0, a.getMonthlyFee() - p);
         }
@@ -241,7 +242,7 @@ public class ReportsPanel extends JPanel {
         saleService.getRevenueByDiscipline().entrySet().stream()
                 .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
                 .forEach(e -> addRevenueRow(SpanishLabels.of(e.getKey()), e.getValue(), total,
-                        ThemeConstants.PRIMARY_BLUE));
+                ThemeConstants.PRIMARY_BLUE));
 
         revenueContent.add(Box.createVerticalStrut(10));
         revenueContent.add(sectionLabel("POR CATEGORÍA"));
@@ -281,20 +282,20 @@ public class ReportsPanel extends JPanel {
         revenueContent.add(Box.createVerticalStrut(8));
     }
 
-    private void reloadPendingTable(List<Athlete> athletes, Map<String, Double> paid) {
+    private void reloadPendingTable(List<Athlete> athletes, Map<AthleteKey, Double> paid) {
         DefaultTableModel model = (DefaultTableModel) pendingTable.getModel();
         model.setRowCount(0);
         saleService.getAthletesWithPendingPayment().stream()
-                .sorted(Comparator.comparingDouble((Athlete a) ->
-                        a.getMonthlyFee() - paid.getOrDefault(a.getId(), 0.0)).reversed())
+                .sorted(Comparator.comparingDouble((Athlete a)
+                        -> a.getMonthlyFee() - paid.getOrDefault(a.getKey(), 0.0)).reversed())
                 .forEach(a -> {
-                    double p = paid.getOrDefault(a.getId(), 0.0);
+                    double p = paid.getOrDefault(a.getKey(), 0.0);
                     model.addRow(new Object[]{
-                            a.getId(),
-                            a.getFullName(),
-                            SpanishLabels.of(a.getDiscipline()),
-                            Money.cop(Math.max(0, a.getMonthlyFee() - p)),
-                            PaymentStatusEnum.of(a.getMonthlyFee(), p).getLabel()
+                        a.getId(),
+                        a.getFullName(),
+                        SpanishLabels.of(a.getDiscipline()),
+                        Money.cop(Math.max(0, a.getMonthlyFee() - p)),
+                        PaymentStatusEnum.of(a.getMonthlyFee(), p).getLabel()
                     });
                 });
     }
@@ -310,12 +311,11 @@ public class ReportsPanel extends JPanel {
         DefaultTableModel model = (DefaultTableModel) monthlyTable.getModel();
         model.setRowCount(0);
         byPeriod.forEach((period, acc) -> model.addRow(new Object[]{
-                period.toString(), (int) acc[0], Money.cop(acc[1])
+            period.toString(), (int) acc[0], Money.cop(acc[1])
         }));
     }
 
     // ------------------------------------------------------------------ Utilidades
-
     private static JLabel statValue() {
         JLabel l = new JLabel("—");
         l.setFont(new Font("Segoe UI", Font.BOLD, 20));
@@ -339,8 +339,11 @@ public class ReportsPanel extends JPanel {
         return l;
     }
 
-    /** Pestaña de texto con subrayado azul cuando está activa. */
+    /**
+     * Pestaña de texto con subrayado azul cuando está activa.
+     */
     private static class TabButton extends JButton {
+
         private boolean active;
 
         TabButton(String text, boolean active) {

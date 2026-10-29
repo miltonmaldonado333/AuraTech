@@ -32,13 +32,19 @@ public class FilePaymentRepository implements IPaymentRepository {
         }
         List<Payment> payments = findAll();
         payments.add(payment);
+        replaceAll(payments);
+        return true;
+    }
 
+    /** Reescribe el archivo completo (FileStorage conserva la copia .bak). */
+    @Override
+    public void replaceAll(List<Payment> payments) throws PersistenceException {
+        Objects.requireNonNull(payments, "payments cannot be null.");
         List<String> lines = new ArrayList<>(payments.size());
         for (Payment p : payments) {
             lines.add(parser.toTextLine(p));
         }
         FileStorage.writeLines(path, lines);
-        return true;
     }
 
     /** Una línea dañada se omite (y se informa) en lugar de impedir cargar al resto. */

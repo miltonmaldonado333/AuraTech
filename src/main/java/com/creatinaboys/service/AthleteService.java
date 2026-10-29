@@ -2,57 +2,71 @@ package com.creatinaboys.service;
 
 import com.creatinaboys.exceptions.AthleteNotFoundException;
 import com.creatinaboys.exceptions.InvalidAgeException;
+import com.creatinaboys.exceptions.ValidationException;
 import com.creatinaboys.model.Athlete;
+import com.creatinaboys.model.AthleteKey;
 import com.creatinaboys.repository.IAthleteRepository;
 
 import java.util.List;
 
-public class AthleteService {
+public class AthleteService implements IAthlteService {
 
     private final IAthleteRepository repository;
     private final IBillingService billingService;
+    private final AthleteUniquenessPolicy uniqueness = new AthleteUniquenessPolicy();
 
     public AthleteService(IAthleteRepository repository, IBillingService billingService) {
         this.repository = repository;
         this.billingService = billingService;
     }
 
-    public boolean registerAthlete(Athlete athlete) throws InvalidAgeException {
+    @Override
+    public boolean registerAthlete(Athlete athlete) throws InvalidAgeException, ValidationException {
+        uniqueness.check(athlete, repository.findAll(), null);
+
         athlete.setCategory(billingService.determineCategory(athlete.getAge()));
         athlete.setMonthlyFee(billingService.calculateFee(athlete.getAge()));
         return repository.save(athlete);
     }
 
-    public Athlete findAthlete(String id) throws AthleteNotFoundException {
+    @Override
+    public Athlete findAthlete(AthleteKey key) throws AthleteNotFoundException {
+        return repository.findByKey(key);
+    }
+
+    @Override
+    public List<Athlete> findAthletesById(String id) {
         return repository.findById(id);
     }
 
+    @Override
     public List<Athlete> getAllAthletes() {
         return repository.findAll();
     }
 
-    public boolean deleteAthlete(String id) {
-        return repository.deleteById(id);
+    @Override
+    public boolean existsByKey(AthleteKey key) {
+        return repository.findAll().stream().anyMatch(a -> a.getKey().equals(key));
     }
 
+    @Override
+    public boolean deleteAthlete(AthleteKey key) {
+        return repository.deleteByKey(key);
+    }
+
+    @Override
     public int getTotalAthletesCount() {
         return repository.findAll().size();
     }
 
+    @Override
     public <T extends Athlete> long getAthletesCountByType(Class<T> type) {
-        return repository.findAll().stream()
-                .filter(type::isInstance)
-                .count();
+        return repository.findAll().stream().filter(type::isInstance).count();
     }
 
     // ------------------------------------------------------------------ Estado y mensualidad
 
-    /**
-     * Recalcula el estado de todos según la política (vencimiento).
-     * - Si la política dice "inactivo", queda inactivo siempre (aunque se haya activado a mano).
-     * - Si un deportista fue desactivado a mano, sigue inactivo hasta que se reactive o renueve.
-     * Solo escribe el archivo cuando algo cambió.
-     */
+    @Override
     public void applyActivationPolicy(IActivationPolicy policy) {
         for (Athlete a : getAllAthletes()) {
             boolean should = policy.shouldBeActive(a);
@@ -66,18 +80,18 @@ public class AthleteService {
         }
     }
 
-    /** Botón Activar / Desactivar. */
-    public boolean toggleAthleteStatus(String id) {
+    @Override
+    public boolean toggleAthleteStatus(AthleteKey key) {
         try {
-            Athlete a = repository.findById(id);
+            Athlete a = repository.findByKey(key);
             if (a.isActive()) {
-                a.setActiveManually(false);          // desactivado a mano
+                a.setActiveManually(false);
             } else if (a.isMembershipExpired(0)) {
-                a.renewMembership(1);                // vencido: renueva 1 mes
+                a.renewMembership(1);
                 a.clearManualOverride();
                 a.setActive(true);
             } else {
-                a.clearManualOverride();             // vigente: solo reactiva
+                a.clearManualOverride();
                 a.setActive(true);
             }
             return repository.update(a);
@@ -86,10 +100,10 @@ public class AthleteService {
         }
     }
 
-    /** Activa o desactiva a mano (se conserva por compatibilidad). */
-    public boolean setAthleteActive(String id, boolean active) {
+    @Override
+    public boolean setAthleteActive(AthleteKey key, boolean active) {
         try {
-            Athlete a = repository.findById(id);
+            Athlete a = repository.findByKey(key);
             a.setActiveManually(active);
             return repository.update(a);
         } catch (AthleteNotFoundException e) {
@@ -97,10 +111,10 @@ public class AthleteService {
         }
     }
 
-    /** Extiende la mensualidad y reactiva. Lo llamará el módulo de Pagos. */
-    public boolean renewMembership(String id, int months) {
+    @Override
+    public boolean renewMembership(AthleteKey key, int months) {
         try {
-            Athlete a = repository.findById(id);
+            Athlete a = repository.findByKey(key);
             a.renewMembership(months);
             a.clearManualOverride();
             a.setActive(!a.isMembershipExpired(0));

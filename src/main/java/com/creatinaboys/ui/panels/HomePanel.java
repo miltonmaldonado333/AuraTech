@@ -13,6 +13,7 @@ import com.creatinaboys.ui.components.Money;
 import com.creatinaboys.ui.components.SpanishLabels;
 import com.creatinaboys.ui.components.VectorIcon;
 import com.creatinaboys.ui.theme.ThemeConstants;
+import com.creatinaboys.model.AthleteKey;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -29,9 +30,9 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
- * Pantalla de Inicio: saludo, accesos rápidos, indicadores del club, cobro del mes,
- * distribución por disciplina y categoría, pagos recientes y mensualidades pendientes.
- * Solo muestra datos; la lógica vive en los servicios.
+ * Pantalla de Inicio: saludo, accesos rápidos, indicadores del club, cobro del
+ * mes, distribución por disciplina y categoría, pagos recientes y mensualidades
+ * pendientes. Solo muestra datos; la lógica vive en los servicios.
  */
 public class HomePanel extends JPanel {
 
@@ -53,13 +54,18 @@ public class HomePanel extends JPanel {
     private final ScrollBody body = new ScrollBody();
     private String username = "";
 
-    /** Debajo de este ancho (px) el tablero usa el diseño compacto. */
+    /**
+     * Debajo de este ancho (px) el tablero usa el diseño compacto.
+     */
     private static final int COMPACT_BELOW = 1100;
     private boolean compact = false;
 
-    /** @param navigate recibe el nombre de la opción del menú ("Registrar", "Pagos"...) a la que ir. */
+    /**
+     * @param navigate recibe el nombre de la opción del menú ("Registrar",
+     * "Pagos"...) a la que ir.
+     */
     public HomePanel(AthleteService athleteService, ISaleService saleService,
-                     ICoachService coachService, Consumer<String> navigate) {
+            ICoachService coachService, Consumer<String> navigate) {
         this.athleteService = athleteService;
         this.saleService = saleService;
         this.coachService = coachService;
@@ -77,7 +83,8 @@ public class HomePanel extends JPanel {
         add(scroll, BorderLayout.CENTER);
 
         addComponentListener(new java.awt.event.ComponentAdapter() {
-            @Override public void componentResized(java.awt.event.ComponentEvent e) {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
                 boolean nowCompact = getWidth() > 0 && getWidth() < COMPACT_BELOW;
                 if (nowCompact != compact) {
                     compact = nowCompact;
@@ -94,7 +101,9 @@ public class HomePanel extends JPanel {
         refresh();
     }
 
-    /** Vuelve a leer los datos y reconstruye el tablero. */
+    /**
+     * Vuelve a leer los datos y reconstruye el tablero.
+     */
     public void refresh() {
         body.removeAll();
         body.setLayout(new GridBagLayout());
@@ -112,13 +121,12 @@ public class HomePanel extends JPanel {
     }
 
     // ------------------------------------------------------------------ construcción
-
     private void build() {
         List<Athlete> athletes = athleteService.getAllAthletes();
         long active = athletes.stream().filter(Athlete::isActive).count();
         int coaches = coachService.getTotalCoachesCount();
 
-        Map<String, Double> paidMap = saleService.getPaidThisMonthByAthlete();
+        Map<AthleteKey, Double> paidMap = saleService.getPaidThisMonthByAthlete();
         double collected = paidMap.values().stream().mapToDouble(Double::doubleValue).sum();
         double expected = saleService.calculateEstimatedMonthlyRevenue();
         List<Athlete> pending = saleService.getAthletesWithPendingPayment();
@@ -183,7 +191,6 @@ public class HomePanel extends JPanel {
     }
 
     // ------------------------------------------------------------------ banner
-
     private JComponent buildHero() {
         JPanel hero = new JPanel(new BorderLayout(20, 0)) {
             @Override
@@ -258,7 +265,6 @@ public class HomePanel extends JPanel {
     }
 
     // ------------------------------------------------------------------ tarjetas
-
     private JComponent statCard(VectorIcon.Type icon, Color accent, String caption, String value, String hint) {
         CardPanel card = new CardPanel(new BorderLayout(14, 0), 14);
         card.add(new IconBadge(icon, accent, 54), BorderLayout.WEST);
@@ -316,8 +322,12 @@ public class HomePanel extends JPanel {
         JPanel r = new JPanel(new BorderLayout(8, 0));
         r.setOpaque(false);
         r.add(new JComponent() {
-            { setPreferredSize(new Dimension(12, 12)); }
-            @Override protected void paintComponent(Graphics g) {
+            {
+                setPreferredSize(new Dimension(12, 12));
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(dot);
@@ -374,13 +384,17 @@ public class HomePanel extends JPanel {
         int i = 0;
         for (Payment p : history.stream().limit(5).collect(Collectors.toList())) {
             String name = names.getOrDefault(p.getAthleteId(), "Documento " + p.getAthleteId());
-            list.add(personRow(name, p.getPaymentDate().format(fmt), "+ " + Money.cop(p.getAmount()),
+            String when = p.getPaymentDate().format(fmt);
+            String detail = p.getDiscipline().isEmpty()
+                    ? when
+                    : when + "  ·  " + SpanishLabels.of(p.getDiscipline());
+            list.add(personRow(name, detail, "+ " + Money.cop(p.getAmount()),
                     GREEN, PALETTE[i++ % PALETTE.length]));
         }
         return top(list);
     }
 
-    private JComponent pendingList(List<Athlete> pending, Map<String, Double> paidMap) {
+    private JComponent pendingList(List<Athlete> pending, Map<AthleteKey, Double> paidMap) {
         if (pending.isEmpty()) {
             return emptyState("¡Todo al día! No hay mensualidades pendientes.", GREEN);
         }
@@ -388,8 +402,10 @@ public class HomePanel extends JPanel {
         list.setOpaque(false);
         int shown = 0;
         for (Athlete a : pending) {
-            if (shown++ == 5) break;
-            double owed = Math.max(0, a.getMonthlyFee() - paidMap.getOrDefault(a.getId(), 0.0));
+            if (shown++ == 5) {
+                break;
+            }
+            double owed = Math.max(0, a.getMonthlyFee() - paidMap.getOrDefault(a.getKey(), 0.0));
             list.add(personRow(a.getFullName(), SpanishLabels.of(a.getDiscipline()) + "  ·  "
                     + SpanishLabels.of(a.getCategory() == null ? null : a.getCategory().getName()),
                     Money.cop(owed), ThemeConstants.DANGER_RED, AMBER));
@@ -462,18 +478,42 @@ public class HomePanel extends JPanel {
     }
 
     // ------------------------------------------------------------------ componentes dibujados
-
-    /** Contenedor que se ajusta al ancho de la ventana (sin barra horizontal). */
+    /**
+     * Contenedor que se ajusta al ancho de la ventana (sin barra horizontal).
+     */
     private static class ScrollBody extends JPanel implements Scrollable {
-        @Override public Dimension getPreferredScrollableViewportSize() { return getPreferredSize(); }
-        @Override public int getScrollableUnitIncrement(Rectangle r, int o, int d) { return 18; }
-        @Override public int getScrollableBlockIncrement(Rectangle r, int o, int d) { return 120; }
-        @Override public boolean getScrollableTracksViewportWidth() { return true; }
-        @Override public boolean getScrollableTracksViewportHeight() { return false; }
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(Rectangle r, int o, int d) {
+            return 18;
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(Rectangle r, int o, int d) {
+            return 120;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
+        }
     }
 
-    /** Barra de progreso con etiqueta y valor. */
+    /**
+     * Barra de progreso con etiqueta y valor.
+     */
     private static class Bar extends JComponent {
+
         private final String name, value;
         private final double fraction;
         private final Color color;
@@ -510,8 +550,11 @@ public class HomePanel extends JPanel {
         }
     }
 
-    /** Anillo de avance con el porcentaje en el centro. */
+    /**
+     * Anillo de avance con el porcentaje en el centro.
+     */
     private static class Donut extends JComponent {
+
         private final double fraction;
 
         Donut(double fraction) {
@@ -547,8 +590,11 @@ public class HomePanel extends JPanel {
         }
     }
 
-    /** Círculo de color con las iniciales de la persona. */
+    /**
+     * Círculo de color con las iniciales de la persona.
+     */
     private static class Avatar extends JComponent {
+
         private final String initials;
         private final Color color;
 
@@ -556,7 +602,9 @@ public class HomePanel extends JPanel {
             this.color = color;
             String[] parts = name.trim().split("\\s+");
             String s = parts[0].substring(0, 1);
-            if (parts.length > 1) s += parts[1].substring(0, 1);
+            if (parts.length > 1) {
+                s += parts[1].substring(0, 1);
+            }
             this.initials = s.toUpperCase(ES);
             setPreferredSize(new Dimension(38, 38));
         }

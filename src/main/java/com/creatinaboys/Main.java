@@ -2,9 +2,11 @@ package com.creatinaboys;
 
 import com.creatinaboys.repository.FileAthleteRepository;
 import com.creatinaboys.repository.FileCoachRepository;
+import com.creatinaboys.repository.FilePaymentRepository;
 import com.creatinaboys.repository.Fileuserrepository;
 import com.creatinaboys.repository.IAthleteRepository;
 import com.creatinaboys.repository.ICoachRepository;
+import com.creatinaboys.repository.IPaymentRepository;
 import com.creatinaboys.service.AthleteService;
 import com.creatinaboys.service.Authservice;
 import com.creatinaboys.service.BillingService;
@@ -15,6 +17,7 @@ import com.creatinaboys.service.IBillingService;
 import com.creatinaboys.service.ICoachService;
 import com.creatinaboys.service.IDisciplineService;
 import com.creatinaboys.service.ISaleService;
+import com.creatinaboys.service.PaymentDisciplineMigration;
 import com.creatinaboys.service.SaleService;
 import com.creatinaboys.ui.LoginFrame;
 import com.creatinaboys.ui.PrincipalFrames;
@@ -39,11 +42,21 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
             // Instanciar repositorios y servicios (DIP / Inyección)
             IAthleteRepository repository = new FileAthleteRepository();
+            IPaymentRepository paymentRepository = new FilePaymentRepository();
             IBillingService billingService = new BillingService();
             IDisciplineService disciplineService = new DisciplineService();
 
+            // Asigna la disciplina a los pagos antiguos (idempotente: solo escribe si algo cambió)
+            try {
+                new PaymentDisciplineMigration(paymentRepository, repository).run();
+            } catch (RuntimeException e) {
+                JOptionPane.showMessageDialog(null,
+                        "No se pudo actualizar el historial de pagos:\n" + e.getMessage(),
+                        "Creatina-Boys", JOptionPane.WARNING_MESSAGE);
+            }
+
             AthleteService athleteService = new AthleteService(repository, billingService);
-            ISaleService saleService = new SaleService(repository, billingService);
+            ISaleService saleService = new SaleService(repository, billingService, paymentRepository);
 
             ICoachRepository coachRepository = new FileCoachRepository();
             ICoachService coachService = new CoachService(coachRepository);

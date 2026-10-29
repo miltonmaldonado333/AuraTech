@@ -1,5 +1,7 @@
 package com.creatinaboys.ui.panels;
 
+import com.creatinaboys.exceptions.DuplicateDataException;
+import com.creatinaboys.exceptions.ValidationException;
 import com.creatinaboys.model.Basketballer;
 import com.creatinaboys.model.Footballer;
 import com.creatinaboys.service.AthleteService;
@@ -243,6 +245,16 @@ public class AthleteRegisterPanel extends JPanel {
                     "Error de Formato", JOptionPane.ERROR_MESSAGE);
         } catch (IllegalArgumentException iae) {
             JOptionPane.showMessageDialog(this, iae.getMessage(), "Campos Incompletos", JOptionPane.WARNING_MESSAGE);
+        } catch (DuplicateDataException dup) {
+            // Documento o dorsal repetido: avisa y devuelve el cursor al campo que falló
+            JOptionPane.showMessageDialog(this, dup.getMessage(),
+                    "Dato duplicado", JOptionPane.WARNING_MESSAGE);
+            JTextField target = (dup.getField() == DuplicateDataException.Field.ID) ? txtId : txtJersey;
+            target.requestFocusInWindow();
+            target.selectAll();
+        } catch (ValidationException ve) {
+            JOptionPane.showMessageDialog(this, ve.getMessage(),
+                    "Datos inválidos", JOptionPane.WARNING_MESSAGE);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "No se pudo registrar el atleta: " + ex.getMessage(),
                     "Error al Registrar", JOptionPane.ERROR_MESSAGE);

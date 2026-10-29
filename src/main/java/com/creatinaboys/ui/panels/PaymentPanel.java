@@ -3,6 +3,7 @@ package com.creatinaboys.ui.panels;
 import com.creatinaboys.exceptions.AthleteNotFoundException;
 import com.creatinaboys.exceptions.PersistenceException;
 import com.creatinaboys.model.Athlete;
+import com.creatinaboys.model.AthleteKey;
 import com.creatinaboys.model.Payment;
 import com.creatinaboys.model.PaymentStatusEnum;
 import com.creatinaboys.service.AthleteService;
@@ -16,6 +17,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -23,7 +25,7 @@ import java.util.Map;
 
 /**
  * Pantalla de Pagos y Cartera (RF4): resumen del mes, registro de pagos totales o parciales,
- * estado de la mensualidad de cada deportista e historial de pagos.
+ * estado de la mensualidad de cada registro (documento + disciplina) e historial de pagos.
  * <p>
  * Toda la lógica (saldos, validaciones, renovación de la afiliación) vive en {@link ISaleService};
  * esta clase solo muestra datos y recoge la entrada del usuario.
@@ -70,8 +72,11 @@ public class PaymentPanel extends JPanel {
     private TabButton tabStatus;
     private TabButton tabHistory;
 
+    /** Registros en el mismo orden que los elementos del combo. */
     private List<Athlete> athletes = List.of();
-    private Map<String, Double> paidByAthlete = Map.of();
+    /** Registros en el mismo orden que las filas de la tabla de estado. */
+    private List<Athlete> statusRows = List.of();
+    private Map<AthleteKey, Double> paidByAthlete = Map.of();
     private boolean updatingCombo;
 
     public PaymentPanel(AthleteService athleteService, ISaleService saleService) {
@@ -228,10 +233,11 @@ public class PaymentPanel extends JPanel {
         tabs.add(tabStatus);
         tabs.add(tabHistory);
 
+        // Columnas numéricas (alineadas a la derecha): Tarifa, Pagado, Saldo -> 3, 4, 5. Insignia: 6.
         statusTable = ModernTable.create(
-                new String[]{"Documento", "Deportista", "Tarifa", "Pagado", "Saldo", "Estado"},
-                new int[]{115, 140, 100, 100, 100, 105}, 2, 3, 4);
-        ModernTable.setBadgeColumn(statusTable, 5, STATUS_PALETTE);
+                new String[]{"Documento", "Deportista", "Disciplina", "Tarifa", "Pagado", "Saldo", "Estado"},
+                new int[]{105, 130, 90, 90, 90, 90, 100}, 3, 4, 5);
+        ModernTable.setBadgeColumn(statusTable, 6, STATUS_PALETTE);
         statusTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 selectAthleteFromTable();
@@ -239,8 +245,8 @@ public class PaymentPanel extends JPanel {
         });
 
         historyTable = ModernTable.create(
-                new String[]{"Fecha", "Documento", "Deportista", "Periodo", "Monto"},
-                new int[]{95, 115, 180, 90, 100}, 4);
+        new String[]{"Fecha", "Documento", "Deportista", "Disciplina", "Periodo", "Monto"},
+        new int[]{115, 100, 140, 95, 80, 100}, 5);
 
         tableHolder.setOpaque(false);
         tableHolder.add(ModernTable.wrap(statusTable), VIEW_STATUS);
@@ -261,31 +267,34 @@ public class PaymentPanel extends JPanel {
 
     /** Vuelve a leer los datos. Se llama cada vez que se muestra la pantalla. */
     public void refresh() {
+        // La clave se captura ANTES de recargar la lista, porque el combo se identifica por posición.
+        AthleteKey keep = selectedKey();
         try {
             athletes = athleteService.getAllAthletes().stream()
-                    .sorted(Comparator.comparing(Athlete::getFullName, String.CASE_INSENSITIVE_ORDER))
+                    .sorted(Comparator.comparing(Athlete::getFullName, String.CASE_INSENSITIVE_ORDER)
+                            .thenComparing(Athlete::getDiscipline))
                     .toList();
             paidByAthlete = saleService.getPaidThisMonthByAthlete();
         } catch (PersistenceException e) {
             feedback("No se pudieron leer los datos: " + e.getMessage(), false);
             return;
         }
-        reloadCombo();
+        reloadCombo(keep);
         reloadStats();
         reloadStatusTable();
         reloadHistoryTable();
         updateAthleteInfo(true);
     }
 
-    private void reloadCombo() {
-        String selectedId = selectedAthleteId();
+    private void reloadCombo(AthleteKey keep) {
         updatingCombo = true;
         DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
         for (Athlete a : athletes) {
-            model.addElement(a.getFullName() + SEPARATOR + a.getId());
+            model.addElement(a.getFullName() + SEPARATOR + a.getId() + SEPARATOR
+                    + SpanishLabels.of(a.getDiscipline()));
         }
         cmbAthlete.setModel(model);
-        selectInCombo(selectedId);
+        selectInCombo(keep);
         updatingCombo = false;
     }
 
@@ -308,18 +317,25 @@ public class PaymentPanel extends JPanel {
 
     private void reloadStatusTable() {
         DefaultTableModel model = (DefaultTableModel) statusTable.getModel();
+
+        List<Athlete> sorted = new ArrayList<>(athletes);
+        sorted.sort(Comparator.comparing((Athlete a) -> statusOf(a).ordinal()).reversed()
+                .thenComparing(Athlete::getFullName, String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(Athlete::getDiscipline));
+        statusRows = sorted;
+
         model.setRowCount(0);
-        athletes.stream()
-                .sorted(Comparator.comparing((Athlete a) -> statusOf(a).ordinal()).reversed()
-                        .thenComparing(Athlete::getFullName, String.CASE_INSENSITIVE_ORDER))
-                .forEach(a -> model.addRow(new Object[]{
-                        a.getId(),
-                        a.getFullName(),
-                        Money.cop(a.getMonthlyFee()),
-                        Money.cop(paidOf(a)),
-                        Money.cop(Math.max(0, a.getMonthlyFee() - paidOf(a))),
-                        statusOf(a).getLabel()
-                }));
+        for (Athlete a : sorted) {
+            model.addRow(new Object[]{
+                    a.getId(),
+                    a.getFullName(),
+                    SpanishLabels.of(a.getDiscipline()),
+                    Money.cop(a.getMonthlyFee()),
+                    Money.cop(paidOf(a)),
+                    Money.cop(Math.max(0, a.getMonthlyFee() - paidOf(a))),
+                    statusOf(a).getLabel()
+            });
+        }
     }
 
     private void reloadHistoryTable() {
@@ -329,10 +345,12 @@ public class PaymentPanel extends JPanel {
         DefaultTableModel model = (DefaultTableModel) historyTable.getModel();
         model.setRowCount(0);
         for (Payment p : saleService.getPaymentHistory()) {
+            String discipline = p.getDiscipline().isEmpty() ? "—" : SpanishLabels.of(p.getDiscipline());
             model.addRow(new Object[]{
                     p.getPaymentDate().format(DATE_FMT),
                     p.getAthleteId(),
                     names.getOrDefault(p.getAthleteId(), "(deportista eliminado)"),
+                    discipline,
                     p.getPeriod().toString(),
                     Money.cop(p.getAmount())
             });
@@ -401,10 +419,11 @@ public class PaymentPanel extends JPanel {
         try {
             double amount = Double.parseDouble(digits);
             boolean wasPaidBefore = statusOf(a) == PaymentStatusEnum.PAID;
-            if (saleService.processMonthlyPayment(a.getId(), amount)) {
+            if (saleService.processMonthlyPayment(a.getKey(), amount)) {
                 refresh();
                 boolean nowPaid = statusOf(a) == PaymentStatusEnum.PAID;
                 feedback("Pago de " + Money.cop(amount) + " registrado para " + a.getFullName()
+                        + " (" + SpanishLabels.of(a.getDiscipline()) + ")"
                         + (nowPaid && !wasPaidBefore ? ". Mensualidad completa: afiliación renovada un mes." : "."), true);
             } else {
                 feedback("No se pudo registrar el pago.", false);
@@ -432,28 +451,24 @@ public class PaymentPanel extends JPanel {
 
     // ------------------------------------------------------------------ Selección
 
-    private String selectedAthleteId() {
-        Object item = cmbAthlete.getSelectedItem();
-        if (item == null) {
-            return null;
-        }
-        String s = item.toString();
-        int i = s.lastIndexOf(SEPARATOR);
-        return i < 0 ? s : s.substring(i + SEPARATOR.length());
-    }
-
+    /** Registro elegido en el combo (el combo y la lista athletes comparten el orden). */
     private Athlete selectedAthlete() {
-        String id = selectedAthleteId();
-        return id == null ? null : athletes.stream().filter(a -> a.getId().equals(id)).findFirst().orElse(null);
+        int i = cmbAthlete.getSelectedIndex();
+        return (i >= 0 && i < athletes.size()) ? athletes.get(i) : null;
     }
 
-    private void selectInCombo(String id) {
+    private AthleteKey selectedKey() {
+        Athlete a = selectedAthlete();
+        return a == null ? null : a.getKey();
+    }
+
+    private void selectInCombo(AthleteKey key) {
         if (cmbAthlete.getItemCount() == 0) {
             return;
         }
-        if (id != null) {
-            for (int i = 0; i < cmbAthlete.getItemCount(); i++) {
-                if (cmbAthlete.getItemAt(i).endsWith(SEPARATOR + id)) {
+        if (key != null) {
+            for (int i = 0; i < athletes.size(); i++) {
+                if (athletes.get(i).getKey().equals(key)) {
                     cmbAthlete.setSelectedIndex(i);
                     return;
                 }
@@ -464,17 +479,17 @@ public class PaymentPanel extends JPanel {
 
     private void selectAthleteFromTable() {
         int row = statusTable.getSelectedRow();
-        if (row < 0) {
+        if (row < 0 || row >= statusRows.size()) {
             return;
         }
-        selectInCombo(String.valueOf(statusTable.getValueAt(row, 0)));
+        selectInCombo(statusRows.get(row).getKey());
         updateAthleteInfo(true);
     }
 
     // ------------------------------------------------------------------ Utilidades
 
     private double paidOf(Athlete a) {
-        return paidByAthlete.getOrDefault(a.getId(), 0.0);
+        return paidByAthlete.getOrDefault(a.getKey(), 0.0);
     }
 
     private PaymentStatusEnum statusOf(Athlete a) {
