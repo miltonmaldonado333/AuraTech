@@ -29,6 +29,7 @@ Additional input rules (`DataValidator`):
 - **FR1 - Athlete management:** create, query, update and delete athletes (id, full name, age, phone, jersey number). *(Create and query are available in the UI; update and delete are supported by the service and repository but have no screen yet.)*
 - **FR2 - Discipline assignment:** assign an athlete to football or basketball, capturing discipline-specific data (playing position for football, height for basketball).
 - **FR3 - Automatic category and fee:** determine the category from the age and assign the monthly fee.
+- **FR3.1 - Accent- and case-insensitive search:** the search boxes of the athlete list and the coach list must find records by id, full name, discipline and category regardless of upper/lower case or accents (e.g. `ninos`, `NIÑOS` and `Niños` return the same results; `futbol` finds `Fútbol`). The coach list also searches by phone. An empty query shows all records.
 - **FR4 - Fee payment control:** record monthly payments and show a payment status summary. *(Pending: the model does not store a payment status yet.)*
 - **FR5 - Coaches:** register coaches and assign them to a discipline and category. *(Service and repository implemented; no screen yet.)*
 - **FR6 - Health records:** keep each athlete's fitness status, restrictions and injury history. *(Service and repository implemented; no screen yet.)*
@@ -40,6 +41,7 @@ Additional input rules (`DataValidator`):
 - **NFR3 - Architecture:** 4-layer architecture (`ui`, `service`, `repository`, `model`) plus the cross-cutting packages `exceptions` and `validation`.
 - **NFR4 - Error handling:** custom checked exceptions (`AthleteNotFoundException`, `CoachNotFoundException`, `InvalidAgeException`, `ValidationException`) and the unchecked `PersistenceException` for storage errors.
 - **NFR5 - Persistence:** UTF-8 text files in `data/`, written through a temporary file with a `.bak` copy; invalid lines are skipped without blocking the rest of the file.
+- **NFR6 - Search normalization:** text comparisons for searching are done through `SearchText` (`com.creatinaboys.ui.components`), which trims the text, removes accents (Unicode NFD decomposition without combining marks) and lowercases it with `Locale.ROOT`. The stored data in `data/` is not modified; only the comparison is normalized.
 
 ## 5. Design Principles
 
