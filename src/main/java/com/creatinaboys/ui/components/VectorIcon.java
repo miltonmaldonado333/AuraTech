@@ -12,7 +12,7 @@ public class VectorIcon implements Icon {
     public enum Type {
         HOME, USERS, USER_PLUS, TAG, TROPHY, WHISTLE, CARD, CHART, GEAR,
         ID, USER, PHONE, HASH, BALL, CALENDAR, CHECK, CLOSE, RULER, FLAG, CHEVRON,
-        SEARCH, TRASH, LOGOUT, CHEV_LEFT, CHEV_RIGHT, EDIT
+        SEARCH, TRASH, LOGOUT, CHEV_LEFT, CHEV_RIGHT, EDIT, LOCK
     }
 
     private final Type type;
@@ -201,6 +201,13 @@ public class VectorIcon implements Icon {
             case EDIT -> {
                 poly(g, true, 16, 4, 20, 8, 8, 20, 4, 20, 4, 16);
                 line(g, 13, 7, 17, 11);
+            }
+            case LOCK -> {
+                g.draw(new RoundRectangle2D.Double(5, 11, 14, 10, 3, 3));
+                g.draw(new Arc2D.Double(8, 3, 8, 10, 0, 180, Arc2D.OPEN));
+                line(g, 8, 8, 8, 11);
+                line(g, 16, 8, 16, 11);
+                g.fill(new Ellipse2D.Double(11, 14.5, 2, 2));
             }
         }
     }

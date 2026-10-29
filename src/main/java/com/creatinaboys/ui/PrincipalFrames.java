@@ -51,6 +51,9 @@ public class PrincipalFrames extends JFrame {
 
     private ReportsPanel reportsPanel;
 
+    /** Acción posterior al cerrar sesión (por defecto, salir de la aplicación). */
+    private Runnable onLogout = () -> System.exit(0);
+
     public PrincipalFrames(AthleteService athleteService, ISaleService saleService,
             IBillingService billingService, IDisciplineService disciplineService,
             ICoachService coachService) {
@@ -64,6 +67,11 @@ public class PrincipalFrames extends JFrame {
         initFrame();
         initSidebar();
         initMainContent();
+    }
+
+    /** Define qué ocurre al pulsar "Cerrar Sesión" (Main lo usa para volver al login). */
+    public void setOnLogout(Runnable onLogout) {
+        this.onLogout = onLogout;
     }
 
     private void initFrame() {
@@ -136,9 +144,12 @@ public class PrincipalFrames extends JFrame {
 
         sidebar.add(menuPanel, BorderLayout.CENTER);
 
-        // Botón Cerrar Sesión (con margen)
+        // Botón Cerrar Sesión (con margen): vuelve a la pantalla de login
         SidebarButton btnLogout = new SidebarButton("Cerrar Sesión");
-        btnLogout.addActionListener(e -> System.exit(0));
+        btnLogout.addActionListener(e -> {
+            dispose();
+            onLogout.run();
+        });
 
         JPanel logoutWrap = new JPanel(new BorderLayout());
         logoutWrap.setOpaque(false);

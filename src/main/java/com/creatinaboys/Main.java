@@ -2,20 +2,25 @@ package com.creatinaboys;
 
 import com.creatinaboys.repository.FileAthleteRepository;
 import com.creatinaboys.repository.FileCoachRepository;
+import com.creatinaboys.repository.Fileuserrepository;
 import com.creatinaboys.repository.IAthleteRepository;
 import com.creatinaboys.repository.ICoachRepository;
 import com.creatinaboys.service.AthleteService;
+import com.creatinaboys.service.Authservice;
 import com.creatinaboys.service.BillingService;
 import com.creatinaboys.service.CoachService;
 import com.creatinaboys.service.DisciplineService;
+import com.creatinaboys.service.IAuthService;
 import com.creatinaboys.service.IBillingService;
 import com.creatinaboys.service.ICoachService;
 import com.creatinaboys.service.IDisciplineService;
 import com.creatinaboys.service.ISaleService;
 import com.creatinaboys.service.SaleService;
+import com.creatinaboys.ui.LoginFrame;
 import com.creatinaboys.ui.PrincipalFrames;
 
 import javax.swing.*;
+import java.util.function.Supplier;
 
 /**
  * Punto de entrada principal de la aplicación Creatina-Boys.
@@ -43,10 +48,30 @@ public class Main {
             ICoachRepository coachRepository = new FileCoachRepository();
             ICoachService coachService = new CoachService(coachRepository);
 
-            // Iniciar interfaz gráfica
-            PrincipalFrames frame = new PrincipalFrames(athleteService, saleService,
+            // Autenticación: crea el usuario inicial la primera vez
+            IAuthService authService = new Authservice(new Fileuserrepository());
+            try {
+                authService.ensureDefaultUser();
+            } catch (RuntimeException e) {
+                JOptionPane.showMessageDialog(null, "No se pudo preparar el archivo de usuarios:\n" + e.getMessage(),
+                        "Creatina-Boys", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Cada inicio de sesión abre una ventana principal nueva con los mismos servicios
+            Supplier<PrincipalFrames> frameFactory = () -> new PrincipalFrames(athleteService, saleService,
                     billingService, disciplineService, coachService);
-            frame.setVisible(true);
+
+            showLogin(authService, frameFactory);
         });
+    }
+
+    /** Muestra el login; al autenticar abre la ventana principal. Cerrar sesión vuelve aquí. */
+    private static void showLogin(IAuthService authService, Supplier<PrincipalFrames> frameFactory) {
+        new LoginFrame(authService, username -> {
+            PrincipalFrames frame = frameFactory.get();
+            frame.setOnLogout(() -> showLogin(authService, frameFactory));
+            frame.setVisible(true);
+        }).setVisible(true);
     }
 }
