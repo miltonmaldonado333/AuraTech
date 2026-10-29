@@ -1,7 +1,12 @@
 package com.creatinaboys.ui.panels;
 
 import com.creatinaboys.model.Athlete;
+import com.creatinaboys.model.Basketballer;
+import com.creatinaboys.model.Footballer;
+import com.creatinaboys.model.Payment;
+import com.creatinaboys.model.PaymentStatusEnum;
 import com.creatinaboys.service.AthleteService;
+import com.creatinaboys.service.ISaleService;
 import com.creatinaboys.ui.components.*;
 import com.creatinaboys.ui.components.VectorIcon.Type;
 import com.creatinaboys.ui.theme.ThemeConstants;
@@ -16,10 +21,13 @@ import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -42,6 +50,8 @@ public class AthleteListPanel extends JPanel {
     private static final Locale CO = Locale.forLanguageTag("es-CO");
 
     private final AthleteService athleteService;
+    /** Opcional: si es null, el panel de detalle no muestra la información de pagos. */
+    private final ISaleService saleService;
 
     private JTable table;
     private DefaultTableModel tableModel;
@@ -52,8 +62,21 @@ public class AthleteListPanel extends JPanel {
     private List<Athlete> filtered = new ArrayList<>();
     private int currentPage = 1;
 
+    // Panel de detalle del deportista seleccionado
+    private JComponent detailWrap;
+    private final JLabel dName = detailTitle();
+    private final JLabel dStatus = new JLabel();
+    private final JPanel dBody = new JPanel();
+    private String selectedId;
+    private boolean refreshing;
+
     public AthleteListPanel(AthleteService athleteService) {
+        this(athleteService, null);
+    }
+
+    public AthleteListPanel(AthleteService athleteService, ISaleService saleService) {
         this.athleteService = athleteService;
+        this.saleService = saleService;
 
         setLayout(new BorderLayout(0, 0));
         setBackground(ThemeConstants.MAIN_BG);
@@ -130,6 +153,10 @@ public class AthleteListPanel extends JPanel {
         JPanel container = new JPanel(new BorderLayout());
         container.setOpaque(false);
         container.add(card, BorderLayout.CENTER);
+
+        detailWrap = buildDetailPanel();
+        detailWrap.setVisible(false);
+        container.add(detailWrap, BorderLayout.EAST);
         return container;
     }
 
@@ -212,6 +239,12 @@ public class AthleteListPanel extends JPanel {
             table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
         }
 
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && !refreshing) {
+                onSelectionChanged();
+            }
+        });
+
         JScrollPane scroll = new JScrollPane(table);
         scroll.setBorder(null);
         scroll.getViewport().setBackground(Color.WHITE);
@@ -288,6 +321,7 @@ public class AthleteListPanel extends JPanel {
         int from = (currentPage - 1) * PAGE_SIZE;
         int to = Math.min(from + PAGE_SIZE, total);
 
+        refreshing = true;
         tableModel.setRowCount(0);
         for (int i = from; i < to; i++) {
             Athlete a = filtered.get(i);
@@ -302,6 +336,9 @@ public class AthleteListPanel extends JPanel {
                 "$" + String.format(CO, "%,.0f", a.getMonthlyFee())
             });
         }
+
+        refreshing = false;
+        restoreSelection();
 
         lblInfo.setText(total == 0
                 ? "Sin registros"
@@ -345,6 +382,186 @@ public class AthleteListPanel extends JPanel {
         paginationPanel.add(lblInfo);
         paginationPanel.revalidate();
         paginationPanel.repaint();
+    }
+
+    // ------------------------------------------------------------------ Detalle del deportista
+    private JComponent buildDetailPanel() {
+        CardPanel card = new CardPanel(new BorderLayout(0, 10), 16);
+        card.setPreferredSize(new Dimension(300, 0));
+
+        JButton close = new JButton("\u2715");
+        close.setFont(ThemeConstants.FONT_BOLD);
+        close.setForeground(ThemeConstants.TEXT_MUTED);
+        close.setContentAreaFilled(false);
+        close.setBorderPainted(false);
+        close.setFocusPainted(false);
+        close.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        close.setToolTipText("Cerrar");
+        close.addActionListener(e -> table.clearSelection());
+
+        JPanel top = new JPanel(new BorderLayout(10, 0));
+        top.setOpaque(false);
+        top.add(new IconBadge(Type.USER, ThemeConstants.PRIMARY_BLUE, 48), BorderLayout.WEST);
+
+        JPanel names = new JPanel();
+        names.setLayout(new BoxLayout(names, BoxLayout.Y_AXIS));
+        names.setOpaque(false);
+        dName.setAlignmentX(LEFT_ALIGNMENT);
+        dStatus.setAlignmentX(LEFT_ALIGNMENT);
+        dStatus.setFont(ThemeConstants.FONT_BOLD);
+        names.add(Box.createVerticalGlue());
+        names.add(dName);
+        names.add(dStatus);
+        names.add(Box.createVerticalGlue());
+        top.add(names, BorderLayout.CENTER);
+        top.add(close, BorderLayout.EAST);
+
+        dBody.setLayout(new BoxLayout(dBody, BoxLayout.Y_AXIS));
+        dBody.setOpaque(false);
+        JScrollPane scroll = new JScrollPane(dBody);
+        scroll.setBorder(null);
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
+        scroll.getVerticalScrollBar().setUnitIncrement(14);
+        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+
+        card.add(top, BorderLayout.NORTH);
+        card.add(scroll, BorderLayout.CENTER);
+
+        JPanel wrap = new JPanel(new BorderLayout());
+        wrap.setOpaque(false);
+        wrap.setBorder(new EmptyBorder(0, 16, 0, 0));
+        wrap.add(card, BorderLayout.CENTER);
+        return wrap;
+    }
+
+    private void onSelectionChanged() {
+        int row = table.getSelectedRow();
+        if (row < 0) {
+            selectedId = null;
+            setDetailVisible(false);
+        } else {
+            selectedId = String.valueOf(tableModel.getValueAt(row, 0));
+            showDetail(selectedId);
+        }
+        revalidate();
+        repaint();
+    }
+
+    /** Tras recargar la tabla, vuelve a marcar al deportista seleccionado si sigue en la página. */
+    private void restoreSelection() {
+        if (selectedId == null) {
+            return;
+        }
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            if (selectedId.equals(String.valueOf(tableModel.getValueAt(i, 0)))) {
+                table.setRowSelectionInterval(i, i);
+                showDetail(selectedId);
+                return;
+            }
+        }
+        selectedId = null;
+        setDetailVisible(false);
+    }
+
+    private void showDetail(String id) {
+        Athlete a = filtered.stream().filter(x -> x.getId().equals(id)).findFirst().orElse(null);
+        if (a == null) {
+            setDetailVisible(false);
+            return;
+        }
+        dName.setText(a.getFullName());
+        dStatus.setText(a.isActive() ? "\u25CF Activo" : "\u25CF Inactivo");
+        dStatus.setForeground(a.isActive() ? new Color(22, 163, 74) : ThemeConstants.DANGER_RED);
+
+        dBody.removeAll();
+        addSection("DATOS PERSONALES");
+        addRow("Documento", a.getId());
+        addRow("Edad", a.getAge() + " años");
+        addRow("Teléfono", a.getPhone());
+
+        addSection("INFORMACIÓN DEPORTIVA");
+        addRow("Disciplina", SpanishLabels.of(a.getDiscipline()));
+        addRow("Categoría", a.getCategory() != null ? SpanishLabels.of(a.getCategory().getName()) : "Sin categoría");
+        addRow("Dorsal", String.valueOf(a.getJerseyNumber()));
+        if (a instanceof Footballer f) {
+            addRow("Posición", f.getPlayingPosition());
+        } else if (a instanceof Basketballer b) {
+            addRow("Estatura", String.format(CO, "%.2f m", b.getHeight()));
+        }
+
+        addSection("MEMBRESÍA");
+        addRow("Estado", a.isActive() ? "Activo" : "Inactivo");
+        addRow("Cambio de estado", a.isManualOverride() ? "Manual" : "Automático");
+        addRow("Vence", a.getPaidUntil().format(DATE_FMT));
+        long days = ChronoUnit.DAYS.between(LocalDate.now(), a.getPaidUntil());
+        addRow(days >= 0 ? "Días restantes" : "Vencida hace", Math.abs(days) + (Math.abs(days) == 1 ? " día" : " días"));
+
+        addSection("PAGOS");
+        addRow("Mensualidad", Money.cop(a.getMonthlyFee()));
+        if (saleService != null) {
+            Map<String, Double> paidMap = saleService.getPaidThisMonthByAthlete();
+            double paid = paidMap.getOrDefault(a.getId(), 0.0);
+            PaymentStatusEnum st = PaymentStatusEnum.of(a.getMonthlyFee(), paid);
+            addRow("Pagado este mes", Money.cop(paid));
+            addRow("Saldo pendiente", Money.cop(Math.max(0, a.getMonthlyFee() - paid)));
+            addRow("Estado del mes", st.getLabel());
+
+            List<Payment> mine = saleService.getPaymentHistory().stream()
+                    .filter(p -> p.getAthleteId().equals(a.getId()))
+                    .limit(5).collect(Collectors.toList());
+            addSection("ÚLTIMOS PAGOS");
+            if (mine.isEmpty()) {
+                addRow("Sin pagos registrados", "");
+            }
+            for (Payment p : mine) {
+                addRow(p.getPaymentDate().format(DATE_FMT) + "  (" + p.getPeriod() + ")", Money.cop(p.getAmount()));
+            }
+        }
+        dBody.add(Box.createVerticalGlue());
+        dBody.revalidate();
+        dBody.repaint();
+        setDetailVisible(true);
+    }
+
+    /** Con el detalle abierto la tabla queda más angosta: se oculta el texto de conteo para que quepan los botones. */
+    private void setDetailVisible(boolean visible) {
+        detailWrap.setVisible(visible);
+        lblInfo.setVisible(!visible);
+    }
+
+    private void addSection(String text) {
+        JLabel l = new JLabel(text);
+        l.setFont(ThemeConstants.FONT_SECTION);
+        l.setForeground(ThemeConstants.PLACEHOLDER);
+        l.setAlignmentX(LEFT_ALIGNMENT);
+        l.setBorder(new EmptyBorder(dBody.getComponentCount() == 0 ? 6 : 14, 0, 6, 0));
+        dBody.add(l);
+    }
+
+    private void addRow(String key, String value) {
+        JPanel r = new JPanel(new BorderLayout(8, 0));
+        r.setOpaque(false);
+        r.setAlignmentX(LEFT_ALIGNMENT);
+        JLabel k = new JLabel(key);
+        k.setFont(ThemeConstants.FONT_REGULAR);
+        k.setForeground(ThemeConstants.TEXT_MUTED);
+        JLabel v = new JLabel(value == null || value.isBlank() ? "—" : value);
+        v.setFont(ThemeConstants.FONT_BOLD);
+        v.setForeground(ThemeConstants.TEXT_MAIN);
+        v.setHorizontalAlignment(SwingConstants.RIGHT);
+        r.add(k, BorderLayout.WEST);
+        r.add(v, BorderLayout.CENTER);
+        r.setBorder(new EmptyBorder(3, 0, 3, 0));
+        r.setMaximumSize(new Dimension(Integer.MAX_VALUE, r.getPreferredSize().height));
+        dBody.add(r);
+    }
+
+    private static JLabel detailTitle() {
+        JLabel l = new JLabel(" ");
+        l.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        l.setForeground(ThemeConstants.TEXT_MAIN);
+        return l;
     }
 
     // ------------------------------------------------------------------ Acciones

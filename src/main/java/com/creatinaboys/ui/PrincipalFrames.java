@@ -1,4 +1,3 @@
-
 package com.creatinaboys.ui;
 
 import com.creatinaboys.service.IBillingService;
@@ -190,7 +189,7 @@ public class PrincipalFrames extends JFrame {
         mainContentPanel.setBackground(ThemeConstants.MAIN_BG);
 
         // Instanciar vistas
-        athleteListPanel = new AthleteListPanel(athleteService);
+        athleteListPanel = new AthleteListPanel(athleteService, saleService);
         AthleteRegisterPanel registerPanel = new AthleteRegisterPanel(athleteService);
         categoryPanel = new CategoryPanel(athleteService, billingService, disciplineService);
         disciplinePanel = new DisciplinePanel(athleteService, disciplineService);
@@ -224,4 +223,3 @@ public class PrincipalFrames extends JFrame {
         }
     }
 }
- 
