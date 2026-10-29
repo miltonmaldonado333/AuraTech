@@ -5,7 +5,9 @@ import com.creatinaboys.exceptions.InvalidAgeException;
 import com.creatinaboys.exceptions.ValidationException;
 import com.creatinaboys.model.Athlete;
 import com.creatinaboys.model.AthleteKey;
+import com.creatinaboys.model.Basketballer;
 import com.creatinaboys.repository.IAthleteRepository;
+import com.creatinaboys.validation.DataValidator;
 
 import java.util.List;
 
@@ -22,6 +24,19 @@ public class AthleteService implements IAthlteService {
 
     @Override
     public boolean registerAthlete(Athlete athlete) throws InvalidAgeException, ValidationException {
+        // Formato de los datos (RNF8): ninguna pantalla puede saltarse estas reglas.
+        // La edad menor de 5 la rechaza BillingService con InvalidAgeException.
+        DataValidator.validateId(athlete.getId());
+        DataValidator.validateFullName(athlete.getFullName());
+        DataValidator.validateRequiredPhone(athlete.getPhone());
+        DataValidator.parseJerseyNumber(String.valueOf(athlete.getJerseyNumber()));
+        if (athlete.getAge() > DataValidator.MAX_AGE) {
+            throw new ValidationException("La edad no puede ser mayor a " + DataValidator.MAX_AGE + " años.");
+        }
+        if (athlete instanceof Basketballer b) {
+            DataValidator.parseHeight(String.valueOf(b.getHeight()));
+        }
+
         uniqueness.check(athlete, repository.findAll(), null);
 
         athlete.setCategory(billingService.determineCategory(athlete.getAge()));
