@@ -13,7 +13,7 @@ public class Basketballer extends Athlete {
     }
 
     private static double requireValidHeight(double height) {
-        if (height <= 0 || height > 2.5) {
+        if (Double.isNaN(height) || height <= 0 || height > 2.5) {
             throw new IllegalArgumentException("height must be between 0 and 2.5 meters.");
         }
         return height;

@@ -8,6 +8,7 @@ import com.creatinaboys.model.Footballer;
 public class FootballerParser implements AthleteParser {
 
     private static final String TYPE = "FOOTBALL";
+    private static final int FIELD_COUNT = 9;
 
     @Override
     public String getType() {
@@ -18,15 +19,15 @@ public class FootballerParser implements AthleteParser {
     public String toTextLine(Athlete athlete) {
         Footballer footballer = (Footballer) athlete;
         String category = footballer.getCategory() == null ? "" : footballer.getCategory().name();
-        
+
         return String.join(";",
                 TYPE,
-                footballer.getId(),
-                footballer.getFullName(),
+                TextCodec.escape(footballer.getId()),
+                TextCodec.escape(footballer.getFullName()),
                 String.valueOf(footballer.getAge()),
-                footballer.getPhone(),
+                TextCodec.escape(footballer.getPhone()),
                 String.valueOf(footballer.getJerseyNumber()),
-                footballer.getPlayingPosition(),
+                TextCodec.escape(footballer.getPlayingPosition()),
                 category,
                 String.valueOf(footballer.getMonthlyFee())
         );
@@ -35,15 +36,24 @@ public class FootballerParser implements AthleteParser {
     @Override
     public Athlete fromTextFields(String[] fields) {
         try {
-            int age = Integer.parseInt(fields[3]);
-            int jerseyNumber = Integer.parseInt(fields[5]);
-            Footballer footballer = new Footballer(fields[1], fields[2], age, fields[4], jerseyNumber, fields[6]);
-            
+            TextCodec.requireFields(fields, FIELD_COUNT, TYPE);
+            int age = Integer.parseInt(fields[3].trim());
+            int jerseyNumber = Integer.parseInt(fields[5].trim());
+            Footballer footballer = new Footballer(
+                    TextCodec.unescape(fields[1]),
+                    TextCodec.unescape(fields[2]),
+                    age,
+                    TextCodec.unescape(fields[4]),
+                    jerseyNumber,
+                    TextCodec.unescape(fields[6]));
+
             if (!fields[7].isBlank()) {
-                footballer.setCategory(CategoryEnum.valueOf(fields[7]));
+                footballer.setCategory(CategoryEnum.valueOf(fields[7].trim()));
             }
-            footballer.setMonthlyFee(Double.parseDouble(fields[8]));
+            footballer.setMonthlyFee(Double.parseDouble(fields[8].trim()));
             return footballer;
+        } catch (PersistenceException e) {
+            throw e;
         } catch (Exception e) {
             throw new PersistenceException("Error parsing Footballer data: " + e.getMessage(), e);
         }

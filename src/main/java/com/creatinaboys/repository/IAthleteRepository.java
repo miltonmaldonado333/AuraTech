@@ -2,27 +2,15 @@ package com.creatinaboys.repository;
 
 import com.creatinaboys.exceptions.AthleteNotFoundException;
 import com.creatinaboys.model.Athlete;
+import com.creatinaboys.model.AthleteKey;
+
 import java.util.List;
 
 public interface IAthleteRepository {
-
-    /**
-     * Stores the athlete. Returns false if an athlete with the same id already
-     * exists.
-     */
     boolean save(Athlete athlete);
-
-    Athlete findById(String id) throws AthleteNotFoundException;
-
+    Athlete findByKey(AthleteKey key) throws AthleteNotFoundException;
+    List<Athlete> findById(String id);          // todos los registros de una persona
     List<Athlete> findAll();
-
-    /**
-     * Removes the athlete. Returns false if no athlete has that id.
-     */
-    boolean deleteById(String id);
-
-    /**
-     * Replaces the stored athlete that has the same id.
-     */
-    boolean update(Athlete athlete) throws AthleteNotFoundException;
+    boolean deleteByKey(AthleteKey key);
+    boolean update(Athlete athlete) throws AthleteNotFoundException; // identifica por athlete.getKey()
 }
