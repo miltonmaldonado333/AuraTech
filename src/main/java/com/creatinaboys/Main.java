@@ -1,6 +1,6 @@
 package com.creatinaboys;
 
-import com.creatinaboys.repository.FileAthleteRepository;
+import com.creatinaboys.repository.PostgresAthleteRepository;
 import com.creatinaboys.repository.FileCoachRepository;
 import com.creatinaboys.repository.FileHealthRepository;
 import com.creatinaboys.repository.FilePaymentRepository;
@@ -45,7 +45,7 @@ public class Main {
         // Arranque en el Event Dispatch Thread (EDT)
         SwingUtilities.invokeLater(() -> {
             // Instanciar repositorios y servicios (DIP / Inyección)
-            IAthleteRepository repository = new FileAthleteRepository();
+            IAthleteRepository repository = new PostgresAthleteRepository();
             IPaymentRepository paymentRepository = new FilePaymentRepository();
             IBillingService billingService = new BillingService();
             IDisciplineService disciplineService = new DisciplineService();

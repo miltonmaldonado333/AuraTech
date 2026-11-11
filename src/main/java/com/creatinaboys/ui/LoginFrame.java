@@ -18,8 +18,8 @@ import java.util.Arrays;
 import java.util.function.Consumer;
 
 /**
- * Pantalla de inicio de sesión (Mockup 1). Al autenticar correctamente se cierra
- * y entrega el nombre de usuario a {@code onSuccess}.
+ * Pantalla de inicio de sesión (Mockup 1). Al autenticar correctamente se
+ * cierra y entrega el nombre de usuario a {@code onSuccess}.
  */
 public class LoginFrame extends JFrame {
 
@@ -145,7 +145,10 @@ public class LoginFrame extends JFrame {
         getRootPane().setDefaultButton(registerPanel.getDefaultButton());
     }
 
-    /** Vuelve al formulario de login; si viene de un registro exitoso, deja el usuario escrito y un aviso. */
+    /**
+     * Vuelve al formulario de login; si viene de un registro exitoso, deja el
+     * usuario escrito y un aviso.
+     */
     private void showLoginCard(String username, String info) {
         cards.show(formCards, CARD_LOGIN);
         getRootPane().setDefaultButton(btnLogin);
@@ -162,22 +165,26 @@ public class LoginFrame extends JFrame {
     }
 
     private void attemptLogin() {
+
         String user = txtUser.getText().trim();
         char[] password = txtPassword.getPassword();
 
         if (user.isEmpty() || password.length == 0) {
             Arrays.fill(password, '\0');
-            showError("Ingrese su usuario y contraseña.");
-            (user.isEmpty() ? txtUser : txtPassword).requestFocusInWindow();
+            showError("Enter your username and password.");
+            (user.isEmpty() ? txtUser : txtPassword)
+                    .requestFocusInWindow();
             return;
         }
 
         setBusy(true);
+
         new SwingWorker<Boolean, Void>() {
+
             @Override
             protected Boolean doInBackground() {
                 try {
-                    return authService.authenticate(user, password);   // PBKDF2: fuera del hilo de la UI
+                    return authService.authenticate(user, password);
                 } finally {
                     Arrays.fill(password, '\0');
                 }
@@ -186,20 +193,41 @@ public class LoginFrame extends JFrame {
             @Override
             protected void done() {
                 try {
-                    if (get()) {
-                        dispose();
-                        onSuccess.accept(user);
+
+                    boolean authenticated = get();
+
+                    if (!authenticated) {
+                        onFailedAttempt();
                         return;
                     }
-                    onFailedAttempt();
+
+                    // Open the main window before closing login
+                    onSuccess.accept(user);
+
+                    // Close login only after successful navigation
+                    dispose();
+
                 } catch (Exception ex) {
-                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    showError(cause instanceof PersistenceException
-                            ? "No se pudo leer el archivo de usuarios."
-                            : "No se pudo iniciar sesión. Intente de nuevo.");
+
+                    Throwable cause = ex.getCause() != null
+                            ? ex.getCause() : ex;
+
+                    // Print the full error in NetBeans Output
+                    cause.printStackTrace();
+
+                    JOptionPane.showMessageDialog(
+                            LoginFrame.this,
+                            "Unable to open AuraTech:\n"
+                            + cause.getMessage(),
+                            "Application Error",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+
+                    showError("Unable to open the application.");
                     setBusy(false);
                 }
             }
+
         }.execute();
     }
 
@@ -215,7 +243,9 @@ public class LoginFrame extends JFrame {
         txtPassword.requestFocusInWindow();
     }
 
-    /** Bloqueo breve tras demasiados intentos fallidos. */
+    /**
+     * Bloqueo breve tras demasiados intentos fallidos.
+     */
     private void startLock() {
         final int[] left = {LOCK_SECONDS};
         btnLogin.setEnabled(false);
