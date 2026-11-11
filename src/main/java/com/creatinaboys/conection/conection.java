@@ -1,4 +1,3 @@
-
 package com.creatinaboys.conection;
 
 import java.sql.Connection;
@@ -8,21 +7,23 @@ import java.sql.SQLException;
 public class conection {
 
     private static final String URL =
-            "jdbc:postgresql://localhost:5432/AuraTech";
+            "jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres"
+            + "?sslmode=require&connectTimeout=10";
 
-    private static final String USUARIO = "postgres";
+    private static final String USER =
+            "postgres.fqtaynutgijgkqnydpkn";
 
-    private static final String CLAVE =
+    private static final String PASSWORD =
             System.getenv("AURATECH_DB_PASSWORD");
 
     public static Connection conectar() throws SQLException {
 
-        if (CLAVE == null || CLAVE.isBlank()) {
+        if (PASSWORD == null || PASSWORD.isBlank()) {
             throw new SQLException(
-                    "Falta configurar AURATECH_DB_PASSWORD");
+                    "Missing AURATECH_DB_PASSWORD environment variable.");
         }
 
         return DriverManager.getConnection(
-                URL, USUARIO, CLAVE);
+                URL, USER, PASSWORD);
     }
 }
