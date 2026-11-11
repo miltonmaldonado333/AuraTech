@@ -33,6 +33,19 @@ public class HealthRecord {
         this.injuries.add(injury);
     }
 
+    /** Busca una lesión de la ficha por su id. */
+    public java.util.Optional<InjuryRecord> findInjury(String injuryId) {
+        return injuries.stream().filter(i -> i.getId().equals(injuryId)).findFirst();
+    }
+
+    /** Quita una lesión de la ficha. Devuelve {@code false} si no existía. */
+    public boolean removeInjury(String injuryId) {
+        if (injuryId == null || injuryId.isBlank()) {
+            throw new IllegalArgumentException("El ID de la lesión es obligatorio");
+        }
+        return injuries.removeIf(i -> i.getId().equals(injuryId));
+    }
+
     public boolean updateFitnessStatus(FitnessStatusEnum newStatus, String newRestrictions, LocalDate newAssessmentDate) {
         if (newStatus == null) {
             throw new IllegalArgumentException("El estado de aptitud es obligatorio");

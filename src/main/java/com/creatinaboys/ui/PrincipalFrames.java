@@ -3,6 +3,7 @@ package com.creatinaboys.ui;
 import com.creatinaboys.service.IBillingService;
 import com.creatinaboys.service.ICoachService;
 import com.creatinaboys.service.IDisciplineService;
+import com.creatinaboys.service.IHealthService;
 import com.creatinaboys.service.MembershipExpirationPolicy;
 import com.creatinaboys.service.AthleteService;
 import com.creatinaboys.service.ISaleService;
@@ -13,6 +14,7 @@ import com.creatinaboys.ui.panels.AthleteRegisterPanel;
 import com.creatinaboys.ui.panels.CategoryPanel;
 import com.creatinaboys.ui.panels.CoachPanel;
 import com.creatinaboys.ui.panels.DisciplinePanel;
+import com.creatinaboys.ui.panels.HealthPanel;
 import com.creatinaboys.ui.panels.HomePanel;
 import com.creatinaboys.ui.panels.PaymentPanel;
 import com.creatinaboys.ui.panels.ReportsPanel;
@@ -37,6 +39,7 @@ public class PrincipalFrames extends JFrame {
     private final IBillingService billingService;
     private final IDisciplineService disciplineService;
     private final ICoachService coachService;
+    private final IHealthService healthService;
 
     private CardLayout cardLayout;
     private JPanel mainContentPanel;
@@ -51,6 +54,8 @@ public class PrincipalFrames extends JFrame {
 
     private CoachPanel coachPanel;
 
+    private HealthPanel healthPanel;
+
     private PaymentPanel paymentPanel;
 
     private ReportsPanel reportsPanel;
@@ -60,12 +65,13 @@ public class PrincipalFrames extends JFrame {
 
     public PrincipalFrames(AthleteService athleteService, ISaleService saleService,
             IBillingService billingService, IDisciplineService disciplineService,
-            ICoachService coachService) {
+            ICoachService coachService, IHealthService healthService) {
         this.athleteService = athleteService;
         this.saleService = saleService;
         this.billingService = billingService;
         this.disciplineService = disciplineService;
         this.coachService = coachService;
+        this.healthService = healthService;
         this.sidebarButtons = new ArrayList<>();
 
         initFrame();
@@ -111,14 +117,14 @@ public class PrincipalFrames extends JFrame {
         sidebar.add(new BrandHeader(), BorderLayout.NORTH);
 
         // Menú Opciones
-        JPanel menuPanel = new JPanel(new GridLayout(8, 1, 0, 5));
+        JPanel menuPanel = new JPanel(new GridLayout(9, 1, 0, 5));
         menuPanel.setOpaque(false);
         menuPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
         String[] menuItems = {
             "Inicio", "Deportistas", "Registrar",
             "Categorías", "Disciplinas", "Entrenadores",
-            "Pagos", "Reportes"
+            "Salud", "Pagos", "Reportes"
         };
 
         for (int i = 0; i < menuItems.length; i++) {
@@ -149,6 +155,9 @@ public class PrincipalFrames extends JFrame {
 
                 } else if ("ENTRENADORES".equals(cardName) && coachPanel != null) {
                     coachPanel.loadCoaches();
+
+                } else if ("SALUD".equals(cardName) && healthPanel != null) {
+                    healthPanel.refresh();
 
                 } else if ("PAGOS".equals(cardName) && paymentPanel != null) {
                     paymentPanel.refresh();
@@ -196,6 +205,8 @@ public class PrincipalFrames extends JFrame {
 
         coachPanel = new CoachPanel(coachService);
 
+        healthPanel = new HealthPanel(athleteService, healthService);
+
         paymentPanel = new PaymentPanel(athleteService, saleService);
 
         reportsPanel = new ReportsPanel(athleteService, saleService);
@@ -209,6 +220,8 @@ public class PrincipalFrames extends JFrame {
         mainContentPanel.add(disciplinePanel, "DISCIPLINAS");
 
         mainContentPanel.add(coachPanel, "ENTRENADORES");
+
+        mainContentPanel.add(healthPanel, "SALUD");
 
         mainContentPanel.add(paymentPanel, "PAGOS");
 

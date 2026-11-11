@@ -72,6 +72,37 @@ public class HealthService implements IHealthService {
         return healthRepository.save(record);
     }
 
+    @Override
+    public boolean updateInjury(String athleteId, String injuryId, String description, String status, String observations)
+            throws AthleteNotFoundException, PersistenceException {
+        requireAthleteId(athleteId);
+        athleteRepository.findById(athleteId);
+
+        Optional<HealthRecord> opt = healthRepository.findByAthleteId(athleteId);
+        if (opt.isEmpty()) return false;
+        HealthRecord record = opt.get();
+        Optional<InjuryRecord> injury = record.findInjury(injuryId);
+        if (injury.isEmpty()) return false;
+
+        InjuryRecord i = injury.get();
+        i.setDescription(description);   // valida que no esté vacía
+        i.setStatus(status);
+        i.setObservations(observations);
+        return healthRepository.save(record);
+    }
+
+    @Override
+    public boolean removeInjury(String athleteId, String injuryId) throws AthleteNotFoundException, PersistenceException {
+        requireAthleteId(athleteId);
+        athleteRepository.findById(athleteId);
+
+        Optional<HealthRecord> opt = healthRepository.findByAthleteId(athleteId);
+        if (opt.isEmpty()) return false;
+        HealthRecord record = opt.get();
+        if (!record.removeInjury(injuryId)) return false;
+        return healthRepository.save(record);
+    }
+
     /**
      * Actualiza la aptitud médica de un atleta.
      */

@@ -56,6 +56,22 @@ public interface IHealthService {
     boolean addInjuryToAthlete(String athleteId, InjuryRecord injury) throws AthleteNotFoundException, PersistenceException;
 
     /**
+     * Modifica descripción, estado y observaciones de una lesión ya registrada.
+     *
+     * @return {@code true} si la lesión existía y se actualizó.
+     * @throws IllegalArgumentException Si algún dato no es válido (p. ej. descripción vacía).
+     */
+    boolean updateInjury(String athleteId, String injuryId, String description, String status, String observations)
+            throws AthleteNotFoundException, PersistenceException;
+
+    /**
+     * Elimina una lesión de la ficha de un deportista.
+     *
+     * @return {@code true} si la lesión existía y se eliminó.
+     */
+    boolean removeInjury(String athleteId, String injuryId) throws AthleteNotFoundException, PersistenceException;
+
+    /**
      * Actualiza el estado de aptitud médica, observaciones y la fecha de valoración de un deportista.
      *
      * @param athleteId Documento de identidad del atleta.

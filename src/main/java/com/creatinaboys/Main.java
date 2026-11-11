@@ -2,20 +2,24 @@ package com.creatinaboys;
 
 import com.creatinaboys.repository.FileAthleteRepository;
 import com.creatinaboys.repository.FileCoachRepository;
+import com.creatinaboys.repository.FileHealthRepository;
 import com.creatinaboys.repository.FilePaymentRepository;
 import com.creatinaboys.repository.Fileuserrepository;
 import com.creatinaboys.repository.IAthleteRepository;
 import com.creatinaboys.repository.ICoachRepository;
+import com.creatinaboys.repository.IHealthRepository;
 import com.creatinaboys.repository.IPaymentRepository;
 import com.creatinaboys.service.AthleteService;
 import com.creatinaboys.service.Authservice;
 import com.creatinaboys.service.BillingService;
 import com.creatinaboys.service.CoachService;
 import com.creatinaboys.service.DisciplineService;
+import com.creatinaboys.service.HealthService;
 import com.creatinaboys.service.IAuthService;
 import com.creatinaboys.service.IBillingService;
 import com.creatinaboys.service.ICoachService;
 import com.creatinaboys.service.IDisciplineService;
+import com.creatinaboys.service.IHealthService;
 import com.creatinaboys.service.ISaleService;
 import com.creatinaboys.service.PaymentDisciplineMigration;
 import com.creatinaboys.service.SaleService;
@@ -61,6 +65,10 @@ public class Main {
             ICoachRepository coachRepository = new FileCoachRepository();
             ICoachService coachService = new CoachService(coachRepository);
 
+            // Fichas de salud (RF6)
+            IHealthRepository healthRepository = new FileHealthRepository();
+            IHealthService healthService = new HealthService(healthRepository, repository);
+
             // Autenticación: crea el usuario inicial la primera vez
             IAuthService authService = new Authservice(new Fileuserrepository());
             try {
@@ -73,7 +81,7 @@ public class Main {
 
             // Cada inicio de sesión abre una ventana principal nueva con los mismos servicios
             Supplier<PrincipalFrames> frameFactory = () -> new PrincipalFrames(athleteService, saleService,
-                    billingService, disciplineService, coachService);
+                    billingService, disciplineService, coachService, healthService);
 
             showLogin(authService, frameFactory);
         });
