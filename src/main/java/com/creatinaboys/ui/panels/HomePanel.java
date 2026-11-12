@@ -30,9 +30,8 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
- * Pantalla de Inicio: saludo, accesos rápidos, indicadores del club, cobro del
- * mes, distribución por disciplina y categoría, pagos recientes y mensualidades
- * pendientes. Solo muestra datos; la lógica vive en los servicios.
+ * Home dashboard. Renders club information while loading data asynchronously.
+ * Business calculations remain delegated to application services.
  */
 public class HomePanel extends JPanel {
 
@@ -53,6 +52,21 @@ public class HomePanel extends JPanel {
 
     private final ScrollBody body = new ScrollBody();
     private String username = "";
+    private DashboardData dashboardData;
+    private long loadVersion;
+
+    private record DashboardData(
+            List<Athlete> athletes,
+            long active,
+            int coaches,
+            Map<AthleteKey, Double> paidMap,
+            double collected,
+            double expected,
+            List<Athlete> pending,
+            List<Payment> history,
+            Map<String, String> names) {
+    }
+
 
     /**
      * Debajo de este ancho (px) el tablero usa el diseño compacto.
@@ -88,7 +102,7 @@ public class HomePanel extends JPanel {
                 boolean nowCompact = getWidth() > 0 && getWidth() < COMPACT_BELOW;
                 if (nowCompact != compact) {
                     compact = nowCompact;
-                    refresh();
+                    renderDashboard();
                 }
             }
         });
@@ -98,30 +112,47 @@ public class HomePanel extends JPanel {
 
     public void setUsername(String username) {
         this.username = username == null ? "" : username.trim();
-        refresh();
+        renderDashboard();
     }
 
-    /**
-     * Vuelve a leer los datos y reconstruye el tablero.
-     */
+    /** Reloads dashboard data without blocking the Swing event thread. */
     public void refresh() {
-        body.removeAll();
-        body.setLayout(new GridBagLayout());
-        try {
-            build();
-        } catch (RuntimeException ex) {
-            body.removeAll();
-            JLabel err = new JLabel("No se pudieron cargar los datos del inicio: " + ex.getMessage());
-            err.setFont(ThemeConstants.FONT_REGULAR);
-            err.setForeground(ThemeConstants.DANGER_RED);
-            body.add(err);
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(this::refresh);
+            return;
         }
-        body.revalidate();
-        body.repaint();
+
+        final long requestedVersion = ++loadVersion;
+        if (dashboardData == null) {
+            showStatus("Loading dashboard...", ThemeConstants.TEXT_MUTED);
+        }
+
+        new SwingWorker<DashboardData, Void>() {
+            @Override
+            protected DashboardData doInBackground() {
+                return loadDashboardData();
+            }
+
+            @Override
+            protected void done() {
+                if (requestedVersion != loadVersion) {
+                    return;
+                }
+                try {
+                    dashboardData = get();
+                    renderDashboard();
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    showStatus("Dashboard loading interrupted.", ThemeConstants.DANGER_RED);
+                } catch (java.util.concurrent.ExecutionException exception) {
+                    exception.getCause().printStackTrace();
+                    showStatus("Unable to load dashboard.", ThemeConstants.DANGER_RED);
+                }
+            }
+        }.execute();
     }
 
-    // ------------------------------------------------------------------ construcción
-    private void build() {
+    private DashboardData loadDashboardData() {
         List<Athlete> athletes = athleteService.getAllAthletes();
         long active = athletes.stream().filter(Athlete::isActive).count();
         int coaches = coachService.getTotalCoachesCount();
@@ -132,7 +163,44 @@ public class HomePanel extends JPanel {
         List<Athlete> pending = saleService.getAthletesWithPendingPayment();
         List<Payment> history = saleService.getPaymentHistory();
         Map<String, String> names = athletes.stream()
-                .collect(Collectors.toMap(Athlete::getId, Athlete::getFullName, (a, b) -> a));
+                .collect(Collectors.toMap(Athlete::getId, Athlete::getFullName, (first, second) -> first));
+
+        return new DashboardData(athletes, active, coaches, paidMap,
+                collected, expected, pending, history, names);
+    }
+
+    private void renderDashboard() {
+        if (dashboardData == null) {
+            return;
+        }
+        body.removeAll();
+        body.setLayout(new GridBagLayout());
+        build(dashboardData);
+        body.revalidate();
+        body.repaint();
+    }
+
+    private void showStatus(String message, Color color) {
+        body.removeAll();
+        body.setLayout(new BorderLayout());
+        JLabel label = new JLabel(message, SwingConstants.CENTER);
+        label.setForeground(color);
+        label.setFont(ThemeConstants.FONT_REGULAR);
+        body.add(label, BorderLayout.CENTER);
+        body.revalidate();
+        body.repaint();
+    }
+
+    private void build(DashboardData data) {
+        List<Athlete> athletes = data.athletes();
+        long active = data.active();
+        int coaches = data.coaches();
+        Map<AthleteKey, Double> paidMap = data.paidMap();
+        double collected = data.collected();
+        double expected = data.expected();
+        List<Athlete> pending = data.pending();
+        List<Payment> history = data.history();
+        Map<String, String> names = data.names();
 
         int row = 0;
         addRow(buildHero(), row++);

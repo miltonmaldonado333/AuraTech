@@ -52,7 +52,10 @@ public class AthleteListPanel extends JPanel {
     private static final Locale CO = Locale.forLanguageTag("es-CO");
 
     private final AthleteService athleteService;
-    /** Opcional: si es null, el panel de detalle no muestra la información de pagos. */
+    /**
+     * Opcional: si es null, el panel de detalle no muestra la información de
+     * pagos.
+     */
     private final ISaleService saleService;
 
     private JTable table;
@@ -62,7 +65,11 @@ public class AthleteListPanel extends JPanel {
     private JPanel paginationPanel;
 
     private List<Athlete> filtered = new ArrayList<>();
-    /** Deportistas de la página visible, en el mismo orden que las filas de la tabla. */
+    private List<Athlete> allAthletes = new ArrayList<>();
+    /**
+     * Deportistas de la página visible, en el mismo orden que las filas de la
+     * tabla.
+     */
     private List<Athlete> pageRows = new ArrayList<>();
     private int currentPage = 1;
 
@@ -292,7 +299,34 @@ public class AthleteListPanel extends JPanel {
      * pestaña).
      */
     public void loadAthleteData() {
-        applyFilterKeepingPage();
+
+        new SwingWorker<List<Athlete>, Void>() {
+
+            @Override
+            protected List<Athlete> doInBackground() {
+                return athleteService.getAllAthletes();
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    allAthletes = get();
+                    applyFilterKeepingPage();
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+
+                    JOptionPane.showMessageDialog(
+                            AthleteListPanel.this,
+                            "Unable to load athletes: "
+                            + e.getMessage(),
+                            "Database Error",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                }
+            }
+
+        }.execute();
     }
 
     private void applyFilter() {
@@ -305,7 +339,7 @@ public class AthleteListPanel extends JPanel {
             filtered = new ArrayList<>();
         } else {
             String q = txtSearch == null ? "" : SearchText.normalize(txtSearch.getText());
-            filtered = athleteService.getAllAthletes().stream()
+           filtered = allAthletes.stream()
                     .filter(a -> q.isEmpty()
                     || SearchText.contains(a.getId(), q)
                     || SearchText.contains(a.getFullName(), q)
@@ -440,7 +474,9 @@ public class AthleteListPanel extends JPanel {
         return wrap;
     }
 
-    /** Deportista de la fila indicada, o null si la fila no es válida. */
+    /**
+     * Deportista de la fila indicada, o null si la fila no es válida.
+     */
     private Athlete athleteAtRow(int row) {
         return (row >= 0 && row < pageRows.size()) ? pageRows.get(row) : null;
     }
@@ -458,7 +494,10 @@ public class AthleteListPanel extends JPanel {
         repaint();
     }
 
-    /** Tras recargar la tabla, vuelve a marcar al deportista seleccionado si sigue en la página. */
+    /**
+     * Tras recargar la tabla, vuelve a marcar al deportista seleccionado si
+     * sigue en la página.
+     */
     private void restoreSelection() {
         if (selectedKey == null) {
             return;
@@ -535,7 +574,10 @@ public class AthleteListPanel extends JPanel {
         setDetailVisible(true);
     }
 
-    /** Con el detalle abierto la tabla queda más angosta: se oculta el texto de conteo para que quepan los botones. */
+    /**
+     * Con el detalle abierto la tabla queda más angosta: se oculta el texto de
+     * conteo para que quepan los botones.
+     */
     private void setDetailVisible(boolean visible) {
         detailWrap.setVisible(visible);
         lblInfo.setVisible(!visible);
@@ -594,7 +636,7 @@ public class AthleteListPanel extends JPanel {
 
         if (confirm == JOptionPane.YES_OPTION) {
             athleteService.toggleAthleteStatus(a.getKey());
-            applyFilterKeepingPage();
+            loadAthleteData();
         }
     }
 
@@ -608,13 +650,13 @@ public class AthleteListPanel extends JPanel {
 
         int confirm = JOptionPane.showConfirmDialog(this,
                 "¿Estás seguro de que deseas eliminar a " + a.getFullName()
-                        + " (ID: " + a.getId() + ") de " + SpanishLabels.of(a.getDiscipline()) + "?",
+                + " (ID: " + a.getId() + ") de " + SpanishLabels.of(a.getDiscipline()) + "?",
                 "Confirmar Eliminación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
             try {
                 athleteService.deleteAthlete(a.getKey());
-                applyFilterKeepingPage();
+                loadAthleteData();
                 JOptionPane.showMessageDialog(this, "Deportista eliminado correctamente.",
                         "Eliminado", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
