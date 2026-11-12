@@ -1,4 +1,3 @@
-
 package com.creatinaboys.ui;
 
 import com.creatinaboys.service.IBillingService;
@@ -21,6 +20,7 @@ import com.creatinaboys.ui.panels.HomePanel;
 import com.creatinaboys.ui.panels.PaymentPanel;
 import com.creatinaboys.ui.panels.ReportsPanel;
 import com.creatinaboys.ui.theme.ThemeConstants;
+import com.creatinaboys.service.IDashBoardService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -36,15 +36,16 @@ public class PrincipalFrames extends JFrame {
     private final IDisciplineService disciplineService;
     private final ICoachService coachService;
     private final IHealthService healthService;
+    private final IDashBoardService dashboardService;
 
     private CardLayout cardLayout;
     private JPanel mainContentPanel;
 
-    private final List<SidebarButton> sidebarButtons =
-            new ArrayList<>();
+    private final List<SidebarButton> sidebarButtons
+            = new ArrayList<>();
 
-    private final List<String> menuNames =
-            new ArrayList<>();
+    private final List<String> menuNames
+            = new ArrayList<>();
 
     private HomePanel homePanel;
     private AthleteListPanel athleteListPanel;
@@ -64,7 +65,7 @@ public class PrincipalFrames extends JFrame {
             IBillingService billingService,
             IDisciplineService disciplineService,
             ICoachService coachService,
-            IHealthService healthService) {
+            IHealthService healthService, IDashBoardService dashboardService) {
 
         this.athleteService = athleteService;
         this.saleService = saleService;
@@ -72,6 +73,10 @@ public class PrincipalFrames extends JFrame {
         this.disciplineService = disciplineService;
         this.coachService = coachService;
         this.healthService = healthService;
+        this.dashboardService = java.util.Objects.requireNonNull(
+                dashboardService,
+                "Dashboard service cannot be null"
+        );
 
         initFrame();
         initMainContent();
@@ -143,8 +148,8 @@ public class PrincipalFrames extends JFrame {
 
         for (String name : menuItems) {
 
-            SidebarButton button =
-                    new SidebarButton(name);
+            SidebarButton button
+                    = new SidebarButton(name);
 
             sidebarButtons.add(button);
             menuNames.add(name);
@@ -154,8 +159,8 @@ public class PrincipalFrames extends JFrame {
             button.addActionListener(e -> {
 
                 try {
-                    boolean newlyCreated =
-                            ensurePanel(cardName);
+                    boolean newlyCreated
+                            = ensurePanel(cardName);
 
                     selectSidebarButton(button);
 
@@ -187,16 +192,16 @@ public class PrincipalFrames extends JFrame {
 
         sidebar.add(menuPanel, BorderLayout.CENTER);
 
-        SidebarButton logoutButton =
-                new SidebarButton("Cerrar Sesión");
+        SidebarButton logoutButton
+                = new SidebarButton("Cerrar Sesión");
 
         logoutButton.addActionListener(e -> {
             dispose();
             onLogout.run();
         });
 
-        JPanel logoutWrap =
-                new JPanel(new BorderLayout());
+        JPanel logoutWrap
+                = new JPanel(new BorderLayout());
 
         logoutWrap.setOpaque(false);
 
@@ -218,17 +223,15 @@ public class PrincipalFrames extends JFrame {
 
         cardLayout = new CardLayout();
 
-        mainContentPanel =
-                new JPanel(cardLayout);
+        mainContentPanel
+                = new JPanel(cardLayout);
 
         mainContentPanel.setBackground(
                 ThemeConstants.MAIN_BG);
 
         // Load only the home panel at startup.
         homePanel = new HomePanel(
-                athleteService,
-                saleService,
-                coachService,
+                dashboardService,
                 this::navigateTo
         );
 
@@ -252,8 +255,8 @@ public class PrincipalFrames extends JFrame {
                     athleteService.applyActivationPolicy(
                             new MembershipExpirationPolicy(5));
 
-                    athleteListPanel =
-                            new AthleteListPanel(
+                    athleteListPanel
+                            = new AthleteListPanel(
                                     athleteService,
                                     saleService);
 
@@ -269,8 +272,8 @@ public class PrincipalFrames extends JFrame {
 
                 if (registerPanel == null) {
 
-                    registerPanel =
-                            new AthleteRegisterPanel(
+                    registerPanel
+                            = new AthleteRegisterPanel(
                                     athleteService);
 
                     mainContentPanel.add(
@@ -285,8 +288,8 @@ public class PrincipalFrames extends JFrame {
 
                 if (categoryPanel == null) {
 
-                    categoryPanel =
-                            new CategoryPanel(
+                    categoryPanel
+                            = new CategoryPanel(
                                     athleteService,
                                     billingService,
                                     disciplineService);
@@ -303,8 +306,8 @@ public class PrincipalFrames extends JFrame {
 
                 if (disciplinePanel == null) {
 
-                    disciplinePanel =
-                            new DisciplinePanel(
+                    disciplinePanel
+                            = new DisciplinePanel(
                                     athleteService,
                                     disciplineService);
 
@@ -320,8 +323,8 @@ public class PrincipalFrames extends JFrame {
 
                 if (coachPanel == null) {
 
-                    coachPanel =
-                            new CoachPanel(coachService);
+                    coachPanel
+                            = new CoachPanel(coachService);
 
                     mainContentPanel.add(
                             coachPanel,
@@ -335,8 +338,8 @@ public class PrincipalFrames extends JFrame {
 
                 if (healthPanel == null) {
 
-                    healthPanel =
-                            new HealthPanel(
+                    healthPanel
+                            = new HealthPanel(
                                     athleteService,
                                     healthService);
 
@@ -352,8 +355,8 @@ public class PrincipalFrames extends JFrame {
 
                 if (paymentPanel == null) {
 
-                    paymentPanel =
-                            new PaymentPanel(
+                    paymentPanel
+                            = new PaymentPanel(
                                     athleteService,
                                     saleService);
 
@@ -369,8 +372,8 @@ public class PrincipalFrames extends JFrame {
 
                 if (reportsPanel == null) {
 
-                    reportsPanel =
-                            new ReportsPanel(
+                    reportsPanel
+                            = new ReportsPanel(
                                     athleteService,
                                     saleService);
 

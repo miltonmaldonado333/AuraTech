@@ -14,6 +14,9 @@ import com.creatinaboys.ui.components.SpanishLabels;
 import com.creatinaboys.ui.components.VectorIcon;
 import com.creatinaboys.ui.theme.ThemeConstants;
 import com.creatinaboys.model.AthleteKey;
+import com.creatinaboys.service.DashboardService;
+import com.creatinaboys.service.DashboardSnapshot;
+import com.creatinaboys.service.IDashBoardService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -45,14 +48,12 @@ public class HomePanel extends JPanel {
     };
     private static final Font FONT_BIG = new Font("Segoe UI", Font.BOLD, 26);
 
-    private final AthleteService athleteService;
-    private final ISaleService saleService;
-    private final ICoachService coachService;
+    private final IDashBoardService dashboardService;
     private final Consumer<String> navigate;
 
     private final ScrollBody body = new ScrollBody();
     private String username = "";
-    private DashboardData dashboardData;
+    private DashboardSnapshot dashboardData;
     private long loadVersion;
 
     private record DashboardData(
@@ -65,8 +66,8 @@ public class HomePanel extends JPanel {
             List<Athlete> pending,
             List<Payment> history,
             Map<String, String> names) {
-    }
 
+    }
 
     /**
      * Debajo de este ancho (px) el tablero usa el diseño compacto.
@@ -78,95 +79,148 @@ public class HomePanel extends JPanel {
      * @param navigate recibe el nombre de la opción del menú ("Registrar",
      * "Pagos"...) a la que ir.
      */
-    public HomePanel(AthleteService athleteService, ISaleService saleService,
-            ICoachService coachService, Consumer<String> navigate) {
-        this.athleteService = athleteService;
-        this.saleService = saleService;
-        this.coachService = coachService;
-        this.navigate = navigate;
+    
+public HomePanel(
+        IDashBoardService dashboardService,
+        Consumer<String> navigate) {
 
-        setLayout(new BorderLayout());
-        setBackground(ThemeConstants.MAIN_BG);
-        body.setBackground(ThemeConstants.MAIN_BG);
-        body.setBorder(new EmptyBorder(24, 28, 24, 28));
+    this.dashboardService = Objects.requireNonNull(
+            dashboardService,
+            "Dashboard service cannot be null"
+    );
 
-        JScrollPane scroll = new JScrollPane(body);
-        scroll.setBorder(null);
-        scroll.getViewport().setBackground(ThemeConstants.MAIN_BG);
-        scroll.getVerticalScrollBar().setUnitIncrement(18);
-        add(scroll, BorderLayout.CENTER);
+    this.navigate = Objects.requireNonNull(
+            navigate,
+            "Navigation callback cannot be null"
+    );
 
-        addComponentListener(new java.awt.event.ComponentAdapter() {
-            @Override
-            public void componentResized(java.awt.event.ComponentEvent e) {
-                boolean nowCompact = getWidth() > 0 && getWidth() < COMPACT_BELOW;
-                if (nowCompact != compact) {
-                    compact = nowCompact;
-                    renderDashboard();
-                }
+    setLayout(new BorderLayout());
+    setBackground(ThemeConstants.MAIN_BG);
+
+    body.setBackground(ThemeConstants.MAIN_BG);
+    body.setBorder(new EmptyBorder(24, 28, 24, 28));
+
+    JScrollPane scroll = new JScrollPane(body);
+    scroll.setBorder(null);
+
+    scroll.getViewport().setBackground(
+            ThemeConstants.MAIN_BG
+    );
+
+    scroll.getVerticalScrollBar().setUnitIncrement(18);
+
+    add(scroll, BorderLayout.CENTER);
+
+    addComponentListener(new java.awt.event.ComponentAdapter() {
+
+        @Override
+        public void componentResized(
+                java.awt.event.ComponentEvent event) {
+
+            boolean nowCompact =
+                    getWidth() > 0
+                    && getWidth() < COMPACT_BELOW;
+
+            if (nowCompact != compact) {
+                compact = nowCompact;
+                renderDashboard();
             }
-        });
+        }
+    });
 
-        refresh();
-    }
+    refresh();
+}
+
+            
 
     public void setUsername(String username) {
-        this.username = username == null ? "" : username.trim();
-        renderDashboard();
-    }
 
-    /** Reloads dashboard data without blocking the Swing event thread. */
-    public void refresh() {
-        if (!SwingUtilities.isEventDispatchThread()) {
-            SwingUtilities.invokeLater(this::refresh);
-            return;
-        }
+        this.username = username == null
+                ? ""
+                : username.trim();
 
-        final long requestedVersion = ++loadVersion;
         if (dashboardData == null) {
-            showStatus("Loading dashboard...", ThemeConstants.TEXT_MUTED);
+            showInitialView();
+        } else {
+            renderDashboard();
         }
-
-        new SwingWorker<DashboardData, Void>() {
-            @Override
-            protected DashboardData doInBackground() {
-                return loadDashboardData();
-            }
-
-            @Override
-            protected void done() {
-                if (requestedVersion != loadVersion) {
-                    return;
-                }
-                try {
-                    dashboardData = get();
-                    renderDashboard();
-                } catch (InterruptedException exception) {
-                    Thread.currentThread().interrupt();
-                    showStatus("Dashboard loading interrupted.", ThemeConstants.DANGER_RED);
-                } catch (java.util.concurrent.ExecutionException exception) {
-                    exception.getCause().printStackTrace();
-                    showStatus("Unable to load dashboard.", ThemeConstants.DANGER_RED);
-                }
-            }
-        }.execute();
     }
 
-    private DashboardData loadDashboardData() {
-        List<Athlete> athletes = athleteService.getAllAthletes();
-        long active = athletes.stream().filter(Athlete::isActive).count();
-        int coaches = coachService.getTotalCoachesCount();
+    /**
+     * Reloads dashboard data without blocking the Swing event thread.
+     */
+    
+public void refresh() {
 
-        Map<AthleteKey, Double> paidMap = saleService.getPaidThisMonthByAthlete();
-        double collected = paidMap.values().stream().mapToDouble(Double::doubleValue).sum();
-        double expected = saleService.calculateEstimatedMonthlyRevenue();
-        List<Athlete> pending = saleService.getAthletesWithPendingPayment();
-        List<Payment> history = saleService.getPaymentHistory();
-        Map<String, String> names = athletes.stream()
-                .collect(Collectors.toMap(Athlete::getId, Athlete::getFullName, (first, second) -> first));
+    if (!SwingUtilities.isEventDispatchThread()) {
+        SwingUtilities.invokeLater(this::refresh);
+        return;
+    }
 
-        return new DashboardData(athletes, active, coaches, paidMap,
-                collected, expected, pending, history, names);
+    final long requestedVersion = ++loadVersion;
+
+    if (dashboardData == null) {
+        showInitialView();
+    }
+
+    new SwingWorker<DashboardSnapshot, Void>() {
+
+        @Override
+        protected DashboardSnapshot doInBackground() {
+            return dashboardService.loadDashboard();
+        }
+
+        @Override
+        protected void done() {
+
+            if (requestedVersion != loadVersion) {
+                return;
+            }
+
+            try {
+                dashboardData = get();
+                renderDashboard();
+
+            } catch (InterruptedException exception) {
+
+                Thread.currentThread().interrupt();
+
+                showStatus(
+                        "Dashboard loading interrupted.",
+                        ThemeConstants.DANGER_RED
+                );
+
+            } catch (java.util.concurrent.ExecutionException exception) {
+
+                Throwable cause = exception.getCause();
+
+                if (cause != null) {
+                    cause.printStackTrace();
+                } else {
+                    exception.printStackTrace();
+                }
+
+                showStatus(
+                        "Unable to load dashboard.",
+                        ThemeConstants.DANGER_RED
+                );
+            }
+        }
+
+    }.execute();
+}
+
+
+
+    private void showInitialView() {
+
+        body.removeAll();
+        body.setLayout(new GridBagLayout());
+
+        addRow(buildHero(), 0);
+
+        body.revalidate();
+        body.repaint();
     }
 
     private void renderDashboard() {
@@ -191,7 +245,7 @@ public class HomePanel extends JPanel {
         body.repaint();
     }
 
-    private void build(DashboardData data) {
+    private void build(DashboardSnapshot data) {
         List<Athlete> athletes = data.athletes();
         long active = data.active();
         int coaches = data.coaches();

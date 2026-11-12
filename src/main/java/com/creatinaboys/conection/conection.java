@@ -39,7 +39,7 @@ public class conection {
 
         // Keep the pool small for Supabase
         config.setMaximumPoolSize(3);
-        config.setMinimumIdle(0);
+        config.setMinimumIdle(1);
 
         // Connection limits
         config.setConnectionTimeout(15000);
