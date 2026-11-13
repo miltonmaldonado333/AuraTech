@@ -9,7 +9,7 @@ Proyecto de aula — Universidad Popular del Cesar (UPC), Programación Computac
 
 ## Características
 
-- **Gestión de deportistas:** registro y consulta con panel de detalle del deportista seleccionado. La búsqueda por documento, nombre, disciplina o categoría ignora tildes y mayúsculas (`ninos`, `NIÑOS` y `Niños` dan el mismo resultado). Persistencia en archivo de texto.
+- **Gestión de deportistas:** registro y consulta con panel de detalle del deportista seleccionado. La búsqueda por documento, nombre, disciplina o categoría ignora tildes y mayúsculas (`ninos`, `NIÑOS` y `Niños` dan el mismo resultado). Los deportistas se guardan en una base de datos PostgreSQL (ver sección *Base de datos*).
 - **Disciplinas:** atributos propios de cada deporte. Futbolistas (posición de juego) y basquetbolistas (estatura en metros). Una misma persona puede estar en varias disciplinas (clave documento + disciplina), con pagos y saldo independientes.
 - **Entrenadores:** registro, edición, activación/desactivación y eliminación, con disciplina y categoría que entrena, búsqueda y paginación.
 - **Control de pagos:** pagos totales o parciales de la mensualidad, estado del mes (Pagado, Parcial, Pendiente) e historial; el monto se valida antes de registrarse (no acepta negativos ni caracteres no numéricos).
@@ -25,7 +25,8 @@ Proyecto de aula — Universidad Popular del Cesar (UPC), Programación Computac
 
   Los menores de 5 años se rechazan con `InvalidAgeException`.
 - **Validación de datos de entrada** centralizada en `DataValidator` y aplicada en `AthleteService.registerAthlete` (documento de 6 a 12 dígitos, nombre solo con letras, teléfono de 7 a 10 dígitos, dorsal de 0 a 99, estatura de 0,5 a 2,5 m), además de la unicidad de documento y dorsal por disciplina.
-- **Persistencia robusta:** archivos UTF-8, escritura mediante archivo temporal con copia `.bak`, y tolerancia a líneas dañadas.
+- **Fichas de salud:** estado físico, restricciones e historial de lesiones por persona (documento), con pantalla propia *Salud*.
+- **Persistencia robusta:** deportistas en PostgreSQL; el resto de datos en archivos UTF-8, escritura mediante archivo temporal con copia `.bak`, y tolerancia a líneas dañadas.
 
 ## Fases del proyecto
 
@@ -39,14 +40,14 @@ Proyecto de aula — Universidad Popular del Cesar (UPC), Programación Computac
 | Módulo                                                                  | Estado                                                        |
 | :---------------------------------------------------------------------- | :------------------------------------------------------------ |
 | Modelo, excepciones y validación                                        | Implementado                                                  |
-| Repositorios (deportistas, entrenadores, pagos, usuarios, salud, disciplinas) | Implementado                                            |
+| Repositorios (deportistas en PostgreSQL; entrenadores, pagos, usuarios, salud y disciplinas en archivos) | Implementado                  |
 | Servicios de deportistas, facturación, pagos, entrenadores, disciplinas y autenticación | Implementado y conectado a la UI            |
-| Pantallas: Inicio, Deportistas, Registrar, Categorías, Disciplinas, Entrenadores, Pagos y Reportes | Implementado                    |
+| Pantallas: Inicio, Deportistas, Registrar, Categorías, Disciplinas, Entrenadores, Pagos, Salud y Reportes | Implementado                    |
 | Login, registro de usuarios y cierre de sesión                          | Implementado                                                  |
 | Control de pagos (RF4) con validación de monto                          | Implementado                                                  |
 | Un deportista en varias disciplinas (RF2.1)                             | Implementado                                                  |
 | Búsqueda sin distinguir tildes ni mayúsculas (RF3.1)                    | Implementado (deportistas y entrenadores)                     |
-| Servicio de salud (RF6)                                                 | Implementado, **sin pantalla** y sin conectar en `Main`       |
+| Fichas de salud (RF6): servicio, repositorio y pantalla *Salud*         | Implementado y conectado en `Main`                            |
 | Edición de datos personales de un deportista (RF1)                      | Pendiente (el repositorio ya lo soporta)                      |
 | Persistencia del catálogo de disciplinas (RF2)                          | Pendiente (`FileDisciplineRepository` no está inyectado en `Main`) |
 | Pruebas automatizadas                                                   | Pendiente (`src/test` está vacío; se probó de forma manual)   |
@@ -115,26 +116,36 @@ AuraTech/
 
 1. **JDK 17** o superior.
 2. **Apache Maven 3.8+**.
+3. Acceso a la base de datos PostgreSQL del proyecto y su contraseña (variable de entorno `AURATECH_DB_PASSWORD`, ver *Base de datos*).
 
 ## Instalación y ejecución
 
 ```bash
 git clone https://github.com/miltonmaldonado333/AuraTech.git
 cd AuraTech
+export AURATECH_DB_PASSWORD=<contraseña-de-la-base-de-datos>   # Windows (PowerShell): $env:AURATECH_DB_PASSWORD="..."
 mvn clean compile
 mvn exec:java
 ```
 
+Si `AURATECH_DB_PASSWORD` no está definida, la aplicación no arranca (`IllegalStateException: Missing database password.`).
+
 `mvn exec:java` usa la clase principal `com.creatinaboys.Main` configurada en el `pom.xml`.
 
-## Datos
+## Base de datos
+
+Los **deportistas** (tablas `athlete_people` y `athletes`) se guardan en una base de datos **PostgreSQL** alojada en Supabase. `PostgresAthleteRepository` implementa `IAthleteRepository` y la conexión la gestiona un pool HikariCP (`com.creatinaboys.conection.conection`, máximo 3 conexiones, SSL obligatorio). El usuario y la URL están en esa clase; la **contraseña no se guarda en el código**: se lee de la variable de entorno `AURATECH_DB_PASSWORD`. `TestConnection` sirve para comprobar la conexión.
+
+El resto de la información (entrenadores, pagos, usuarios, salud y disciplinas) sigue en archivos de texto, como se describe a continuación.
+
+## Datos en archivos
 
 Los datos se guardan en la carpeta `data/` junto al lugar desde donde se ejecuta la aplicación
 (se crea automáticamente):
 
 | Archivo                    | Contenido                  |
 | :------------------------- | :------------------------- |
-| `data/athletes.txt`        | Deportistas                |
+| `data/athletes.txt`        | Deportistas (formato anterior a PostgreSQL; ya no lo usa `Main`) |
 | `data/coaches.txt`         | Entrenadores               |
 | `data/payments.txt`        | Pagos de mensualidades     |
 | `data/users.txt`           | Usuarios (sal y hash, sin contraseña en claro) |
