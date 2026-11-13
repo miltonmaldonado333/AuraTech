@@ -10,18 +10,17 @@ import java.sql.SQLException;
 public class conection {
 
     private static final String URL =
-            "jdbc:postgresql://db.fqtaynutgijgkqnydpkn.supabase.co:5432/postgres"
-            + "?sslmode=require&connectTimeout=10";
+            "jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require";
 
-    private static final String USER = "postgres";
+    private static final String USER =
+            "postgres.fqtaynutgijgkqnydpkn";
 
     private static final HikariDataSource dataSource =
             createDataSource();
 
     private static HikariDataSource createDataSource() {
 
-        String password =
-                System.getenv("AURATECH_DB_PASSWORD");
+        String password = System.getenv("AURATECH_DB_PASSWORD");
 
         if (password == null || password.isBlank()) {
             throw new IllegalStateException(
@@ -34,14 +33,12 @@ public class conection {
         config.setUsername(USER);
         config.setPassword(password);
 
-        // Reuse database connections
+        // Connection pool configuration
         config.setPoolName("AuraTechPool");
-
-        // Keep the pool small for Supabase
         config.setMaximumPoolSize(3);
         config.setMinimumIdle(1);
 
-        // Connection limits
+        // Connection timeouts
         config.setConnectionTimeout(15000);
         config.setValidationTimeout(5000);
         config.setIdleTimeout(60000);
@@ -50,9 +47,7 @@ public class conection {
         return new HikariDataSource(config);
     }
 
-    public static Connection conectar()
-            throws SQLException {
-
+    public static Connection conectar() throws SQLException {
         return dataSource.getConnection();
     }
 
