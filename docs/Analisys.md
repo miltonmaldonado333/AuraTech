@@ -54,18 +54,18 @@ Athletes younger than 5 years are rejected with `InvalidAgeException`.
 - **FR3.1 - Accent- and case-insensitive search:** the search boxes of the athlete list and the coach list must find records by id, full name, discipline and category regardless of upper/lower case or accents (e.g. `ninos`, `NIÑOS` and `Niños` return the same results; `futbol` finds `Fútbol`). The coach list also searches by phone. An empty query shows all records.
 - **FR4 - Fee payment control:** record full or partial monthly payments, show the status of the month per athlete (Paid, Partial, Pending) and the payment history. Payments are stored in `data/payments.txt`.
 - **FR5 - Coaches:** register, edit, activate/deactivate and delete coaches, and assign each one to a discipline and a category (*Coaches* screen, with search and pagination).
-- **FR6 - Health records:** keep each athlete's fitness status, restrictions and injury history. *(Model, service and repository are implemented; there is no screen yet and `HealthService` is not wired in `Main`.)*
+- **FR6 - Health records:** keep each person's fitness status, restrictions and injury history (the record belongs to the person's id, not to each discipline). Implemented in the *Health* screen (`HealthPanel`), backed by `HealthService` and `FileHealthRepository`, wired in `Main`.
 - **FR7 - Authentication:** log in with a user account, create new accounts and log out (the login window opens again).
 - **FR8 - Dashboard:** the home screen summarizes athletes, income collected and expected, athletes by discipline and category, recent payments and athletes with pending payments, with shortcuts to the main screens.
 - **FR9 - Reports:** projected, collected and pending income, compliance percentage, income by discipline and by category, the pending-payment portfolio and the collection month by month.
 
 ## 4. Non-Functional Requirements (NFR)
 
-- **NFR1 - Platform:** Java (JDK 17) built with Apache Maven.
+- **NFR1 - Platform:** Java (JDK 17) built with Apache Maven; PostgreSQL JDBC driver and HikariCP as dependencies.
 - **NFR2 - User interface:** Java Swing in `com.creatinaboys.ui`: frames (`LoginFrame`, `PrincipalFrames`), one panel per screen (`ui.panels`) and reusable custom components (`ui.components`, `ui.theme`).
 - **NFR3 - Architecture:** 4-layer architecture (`ui`, `service`, `repository`, `model`) plus the cross-cutting packages `exceptions` and `validation`.
 - **NFR4 - Error handling:** custom checked exceptions (`AthleteNotFoundException`, `CoachNotFoundException`, `InvalidAgeException`, `ValidationException`) and the unchecked `PersistenceException` for storage errors.
-- **NFR5 - Persistence:** UTF-8 text files in `data/` (`athletes.txt`, `coaches.txt`, `payments.txt`, `users.txt`), written through a temporary file with a `.bak` copy; invalid lines are skipped without blocking the rest of the file.
+- **NFR5 - Persistence:** athletes are stored in a PostgreSQL database (Supabase) through `PostgresAthleteRepository` (tables `athlete_people` and `athletes`) and a HikariCP connection pool (`conection`); the password is read from the `AURATECH_DB_PASSWORD` environment variable. Coaches, payments, users, health records and disciplines are UTF-8 text files in `data/` (`coaches.txt`, `payments.txt`, `users.txt`, `health_records.txt`, `disciplines.txt`), written through a temporary file with a `.bak` copy; invalid lines are skipped without blocking the rest of the file.
 - **NFR6 - Search normalization:** text comparisons for searching are done through `SearchText` (`com.creatinaboys.ui.components`), which trims the text, removes accents (Unicode NFD decomposition without combining marks) and lowercases it with `Locale.ROOT`. The stored data in `data/` is not modified; only the comparison is normalized.
 - **NFR7 - Security:** passwords are never stored in plain text: they are saved with a random salt and hashed with PBKDF2-HMAC-SHA256.
 
@@ -78,4 +78,4 @@ Athletes younger than 5 years are rejected with `InvalidAgeException`.
 
 - Edit screen for an athlete's personal data (FR1).
 - Persist the discipline catalog by injecting `FileDisciplineRepository` in `Main`, and let new disciplines be used when registering athletes (FR2).
-- Screen and wiring for health records (FR6).
+- Move coaches, payments and the other file-based data to the database (athletes are already in PostgreSQL).
