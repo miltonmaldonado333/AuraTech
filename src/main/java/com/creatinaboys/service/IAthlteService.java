@@ -19,16 +19,14 @@ public interface IAthlteService {
     int getTotalAthletesCount();
     <T extends Athlete> long getAthletesCountByType(Class<T> type);
 
-    /** RF1: edita nombre, edad y teléfono de una persona (se aplica a todas sus disciplinas).
-     * @param key
-     * @param fullName
-     * @param age
-     * @param phone
-     * @return 
-     * @throws com.creatinaboys.exceptions.AthleteNotFoundException
-     * @throws com.creatinaboys.exceptions.InvalidAgeException
-     * @throws com.creatinaboys.exceptions.ValidationException */
-    boolean updatePersonalData(AthleteKey key, String fullName, int age, String phone)
+    /**
+     * RF1: edita todos los datos de un deportista (nombre, edad, teléfono, dorsal y
+     * posición/estatura). El documento y la disciplina identifican el registro y no cambian.
+     * Nombre, edad y teléfono se aplican a todas las disciplinas de la misma persona.
+     * @param specific posición de juego (fútbol) o estatura en metros (baloncesto)
+     */
+    boolean updateAthleteData(AthleteKey key, String fullName, int age, String phone,
+                              int jerseyNumber, String specific)
             throws AthleteNotFoundException, InvalidAgeException, ValidationException;
 
     boolean deleteAthlete(AthleteKey key);
