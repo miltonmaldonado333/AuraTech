@@ -1,4 +1,3 @@
-
 package com.creatinaboys.service;
 
 import com.creatinaboys.model.Athlete;
@@ -25,6 +24,7 @@ public class DashboardService implements IDashBoardService {
     private final IPaymentRepository paymentRepository;
     private final ICoachService coachService;
     private final Clock clock;
+    private final CategoryService categoryService;
 
     public DashboardService(
             IAthleteRepository athleteRepository,
@@ -35,6 +35,22 @@ public class DashboardService implements IDashBoardService {
                 athleteRepository,
                 paymentRepository,
                 coachService,
+                null,
+                Clock.systemDefaultZone()
+        );
+    }
+
+    public DashboardService(
+            IAthleteRepository athleteRepository,
+            IPaymentRepository paymentRepository,
+            ICoachService coachService,
+            CategoryService categoryService) {
+
+        this(
+                athleteRepository,
+                paymentRepository,
+                coachService,
+                categoryService,
                 Clock.systemDefaultZone()
         );
     }
@@ -44,6 +60,18 @@ public class DashboardService implements IDashBoardService {
             IPaymentRepository paymentRepository,
             ICoachService coachService,
             Clock clock) {
+
+        this(athleteRepository, paymentRepository, coachService, null, clock);
+    }
+
+    public DashboardService(
+            IAthleteRepository athleteRepository,
+            IPaymentRepository paymentRepository,
+            ICoachService coachService,
+            CategoryService categoryService,
+            Clock clock) {
+
+        this.categoryService = categoryService;
 
         this.athleteRepository = Objects.requireNonNull(
                 athleteRepository);
@@ -112,6 +140,16 @@ public class DashboardService implements IDashBoardService {
                         (first, second) -> first
                 ));
 
+        // Nombres de todas las categorías del catálogo (también las que aún no tienen deportistas).
+        List<String> categories = new ArrayList<>();
+        if (categoryService != null) {
+            try {
+                categoryService.getCategories().forEach(c -> categories.add(c.name()));
+            } catch (RuntimeException exception) {
+                // Sin catálogo se muestran solo las categorías de los deportistas.
+            }
+        }
+
         return new DashboardSnapshot(
                 List.copyOf(athletes),
                 active,
@@ -121,7 +159,8 @@ public class DashboardService implements IDashBoardService {
                 expected,
                 List.copyOf(pending),
                 List.copyOf(history),
-                Map.copyOf(names)
+                Map.copyOf(names),
+                List.copyOf(categories)
         );
     }
 

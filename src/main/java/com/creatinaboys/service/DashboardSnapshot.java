@@ -1,4 +1,3 @@
-
 package com.creatinaboys.service;
 
 import com.creatinaboys.model.Athlete;
@@ -17,6 +16,7 @@ public record DashboardSnapshot(
         double expected,
         List<Athlete> pending,
         List<Payment> history,
-        Map<String, String> names
+        Map<String, String> names,
+        List<String> categories
 ) {
 }
