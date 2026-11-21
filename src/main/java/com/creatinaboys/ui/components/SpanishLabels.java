@@ -13,7 +13,6 @@ public final class SpanishLabels {
         // Disciplinas
         MAP.put("football", "Fútbol");
         MAP.put("basketball", "Baloncesto");
-        // Categorías (agrega aquí las de tu CategoryEnum si alguna no se traduce)
         MAP.put("kids", "Niños");
         MAP.put("children", "Niños");
         MAP.put("child", "Niños");
@@ -26,6 +25,14 @@ public final class SpanishLabels {
     }
 
     private SpanishLabels() { }
+
+    public static String discipline(String name) {
+        return switch (name) {
+            case "Football" -> "Fútbol";
+            case "Basketball" -> "Baloncesto";
+            default -> name;
+        };
+    }
 
     public static String of(String text) {
         if (text == null || text.isBlank()) {
