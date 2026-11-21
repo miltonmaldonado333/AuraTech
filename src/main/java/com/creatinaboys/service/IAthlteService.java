@@ -5,6 +5,7 @@ import com.creatinaboys.exceptions.InvalidAgeException;
 import com.creatinaboys.exceptions.ValidationException;
 import com.creatinaboys.model.Athlete;
 import com.creatinaboys.model.AthleteKey;
+import com.creatinaboys.model.CategoryEnum;
 
 import java.util.List;
 
@@ -28,6 +29,16 @@ public interface IAthlteService {
     boolean updateAthleteData(AthleteKey key, String fullName, int age, String phone,
                               int jerseyNumber, String specific)
             throws AthleteNotFoundException, InvalidAgeException, ValidationException;
+
+    /** Categoría que le correspondería a esa edad (para avisar antes de guardar). */
+    default CategoryEnum categoryForAge(int age) throws InvalidAgeException {
+        throw new UnsupportedOperationException("categoryForAge no implementado");
+    }
+
+    /** Mensualidad que le correspondería a esa edad (para avisar antes de guardar). */
+    default double feeForAge(int age) throws InvalidAgeException {
+        throw new UnsupportedOperationException("feeForAge no implementado");
+    }
 
     boolean deleteAthlete(AthleteKey key);
     boolean toggleAthleteStatus(AthleteKey key);
