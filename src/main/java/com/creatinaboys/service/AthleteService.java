@@ -10,11 +10,10 @@ import com.creatinaboys.model.CategoryEnum;
 import com.creatinaboys.model.Footballer;
 import com.creatinaboys.repository.IAthleteRepository;
 import com.creatinaboys.validation.DataValidator;
-<<<<<<< HEAD
+
 import java.util.ArrayList;
 import com.creatinaboys.model.AgeCategory;
-=======
->>>>>>> f7da9cf668b33538399968f7d1d262db0befc3c2
+
 
 import java.util.ArrayList;
 import java.util.List;
