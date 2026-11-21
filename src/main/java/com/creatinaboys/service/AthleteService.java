@@ -8,6 +8,7 @@ import com.creatinaboys.model.AthleteKey;
 import com.creatinaboys.model.Basketballer;
 import com.creatinaboys.model.CategoryEnum;
 import com.creatinaboys.model.Footballer;
+import com.creatinaboys.model.GeneralAthlete;
 import com.creatinaboys.repository.IAthleteRepository;
 import com.creatinaboys.validation.DataValidator;
 
@@ -89,6 +90,9 @@ public class AthleteService implements IAthlteService {
         if (target instanceof Basketballer) {
             newHeight = DataValidator.parseHeight(specific);
             candidate = new Basketballer(target.getId(), newName, age, newPhone, jerseyNumber, newHeight);
+        } else if (target instanceof GeneralAthlete) {
+            candidate = new GeneralAthlete(target.getId(), newName, age, newPhone, jerseyNumber,
+                    target.getDiscipline());
         } else {
             DataValidator.validateRequiredString(specific, "Posición de juego");
             newPosition = specific.trim();
