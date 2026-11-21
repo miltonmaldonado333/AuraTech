@@ -10,23 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-/**
- * Servicio del catálogo de disciplinas deportivas del Club Creatina-Boys.
- * <p>
- * Los nombres canónicos son los mismos que devuelve {@code Athlete.getDiscipline()}
- * ("Football", "Basketball"), de modo que el catálogo y los deportistas se puedan cruzar.
- * </p>
- * <ul>
- *   <li><b>Persistencia:</b> si se inyecta un {@link IDisciplineRepository}, el catálogo se carga
- *       al iniciar y cada disciplina nueva se guarda en archivo (antes se perdía al cerrar la app).</li>
- *   <li><b>Alias:</b> "Fútbol" y "Baloncesto" (como se ven en la UI) se reconocen como
- *       "Football" y "Basketball", para no crear duplicados por el idioma.</li>
- *   <li><b>Seguridad de hilos:</b> los métodos están sincronizados.</li>
- * </ul>
- *
- * @author Milton Andrés Maldonado Salcedo
- * @version 2.0
- */
+/** Manages discovery, naming and registration for the discipline catalog. */
 public class DisciplineService implements IDisciplineService {
 
     /** Disciplinas base del club: siempre existen, aunque el archivo esté vacío o no exista. */
@@ -42,7 +26,7 @@ public class DisciplineService implements IDisciplineService {
     );
 
     private final List<String> disciplines = new ArrayList<>();
-    private final IDisciplineRepository repository; // null = solo en memoria
+    private final IDisciplineRepository repository;
 
     /** Solo en memoria, con las disciplinas base. */
     public DisciplineService() {
@@ -57,17 +41,13 @@ public class DisciplineService implements IDisciplineService {
         load(initialDisciplines);
     }
 
-    /** Con persistencia: carga el catálogo guardado y completa las disciplinas base si faltan. */
+    /** Uses the supplied persistence adapter as the source of truth. */
     public DisciplineService(IDisciplineRepository repository) throws PersistenceException {
         this.repository = Objects.requireNonNull(repository, "El repositorio no puede ser nulo.");
-        int before = load(repository.findAll());
-        if (before != disciplines.size() || before == 0) {
-            repository.saveAll(disciplines); // primera ejecución o archivo incompleto
-        }
+
     }
 
-    /** Carga y sanea la lista; devuelve cuántas había antes de completar las base. */
-    private int load(List<String> source) {
+    private void load(List<String> source) {
         for (String raw : source) {
             if (raw != null && !raw.isBlank()) {
                 String name = canonical(raw);
@@ -76,38 +56,48 @@ public class DisciplineService implements IDisciplineService {
                 }
             }
         }
-        int before = disciplines.size();
         for (String base : DEFAULTS) {
             if (indexOf(base) < 0) {
                 disciplines.add(base);
             }
         }
-        return before;
     }
 
     @Override
     public synchronized List<String> getAvailableDisciplines() throws PersistenceException {
-        return List.copyOf(disciplines);
+        if (repository == null) {
+            return List.copyOf(disciplines);
+        }
+
+        List<String> available = new ArrayList<>(DEFAULTS);
+        for (String discipline : repository.findAll()) {
+            if (available.stream().noneMatch(discipline::equalsIgnoreCase)) {
+                available.add(discipline);
+            }
+        }
+        return List.copyOf(available);
     }
 
     @Override
     public synchronized boolean registerDiscipline(String disciplineName) throws PersistenceException {
         if (disciplineName == null || disciplineName.isBlank()) {
-            throw new IllegalArgumentException("El nombre de la disciplina no puede estar vacío.");
+            throw new IllegalArgumentException("The discipline name is required.");
         }
         String name = canonical(disciplineName);
+        if (!name.matches("[\\p{L}\\p{M}\\p{N} ._'-]{1,60}")
+                || !name.matches(".*[\\p{L}\\p{N}].*")) {
+            throw new IllegalArgumentException("Enter a discipline name with 1 to 60 characters.");
+        }
+        if (DEFAULTS.stream().anyMatch(name::equalsIgnoreCase)) {
+            return false;
+        }
+        if (repository != null) {
+            return repository.add(name);
+        }
         if (indexOf(name) >= 0) {
             return false;
         }
         disciplines.add(name);
-        if (repository != null) {
-            try {
-                repository.saveAll(disciplines);
-            } catch (PersistenceException e) {
-                disciplines.remove(name); // no dejar memoria y archivo desincronizados
-                throw e;
-            }
-        }
         return true;
     }
 
@@ -121,13 +111,13 @@ public class DisciplineService implements IDisciplineService {
         if (disciplineName == null || disciplineName.isBlank()) {
             return Optional.empty();
         }
-        int i = indexOf(canonical(disciplineName));
-        return i < 0 ? Optional.empty() : Optional.of(disciplines.get(i));
+        String name = canonical(disciplineName);
+        return getAvailableDisciplines().stream().filter(name::equalsIgnoreCase).findFirst();
     }
 
     @Override
     public synchronized int getTotalDisciplinesCount() throws PersistenceException {
-        return disciplines.size();
+        return getAvailableDisciplines().size();
     }
 
     // ------------------------------------------------------------------ utilidades
@@ -143,7 +133,8 @@ public class DisciplineService implements IDisciplineService {
 
     /** Quita espacios sobrantes, resuelve alias y pone la primera letra en mayúscula. */
     private static String canonical(String raw) {
-        String clean = raw.trim().replaceAll("\\s+", " ");
+        String clean = java.text.Normalizer.normalize(raw.strip(), java.text.Normalizer.Form.NFC)
+                .replaceAll("\\s+", " ");
         String key = java.text.Normalizer.normalize(clean, java.text.Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .toLowerCase(Locale.ROOT);

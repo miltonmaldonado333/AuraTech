@@ -4,6 +4,7 @@ import com.creatinaboys.exceptions.PersistenceException;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -29,7 +30,16 @@ public class FileDisciplineRepository implements IDisciplineRepository {
                 .toList();
     }
 
-    @Override
+    public synchronized boolean add(String name) {
+        List<String> disciplines = new ArrayList<>(findAll());
+        if (disciplines.stream().anyMatch(name::equalsIgnoreCase)) {
+            return false;
+        }
+        disciplines.add(name);
+        saveAll(disciplines);
+        return true;
+    }
+
     public void saveAll(List<String> disciplines) throws PersistenceException {
         FileStorage.writeLines(path, Objects.requireNonNull(disciplines, "disciplines cannot be null."));
     }

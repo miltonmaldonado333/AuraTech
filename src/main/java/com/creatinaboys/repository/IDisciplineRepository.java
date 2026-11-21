@@ -10,9 +10,9 @@ import java.util.List;
  */
 public interface IDisciplineRepository {
 
-    /** Devuelve los nombres guardados (lista vacía si todavía no hay archivo). */
+    /** Devuelve los nombres guardados (lista vacía si el catálogo no tiene registros). */
     List<String> findAll() throws PersistenceException;
 
-    /** Reemplaza el catálogo guardado por la lista dada. */
-    void saveAll(List<String> disciplines) throws PersistenceException;
+    /** Adds the discipline and returns false if the name already exists. */
+    boolean add(String name) throws PersistenceException;
 }
