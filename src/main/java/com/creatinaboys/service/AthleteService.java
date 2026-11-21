@@ -6,11 +6,12 @@ import com.creatinaboys.exceptions.ValidationException;
 import com.creatinaboys.model.Athlete;
 import com.creatinaboys.model.AthleteKey;
 import com.creatinaboys.model.Basketballer;
+import com.creatinaboys.model.CategoryEnum;
 import com.creatinaboys.model.Footballer;
 import com.creatinaboys.repository.IAthleteRepository;
 import com.creatinaboys.validation.DataValidator;
-import java.util.ArrayList;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class AthleteService implements IAthlteService {
@@ -46,7 +47,7 @@ public class AthleteService implements IAthlteService {
         return repository.save(athlete);
     }
 
-       @Override
+    @Override
     public boolean updateAthleteData(AthleteKey key, String fullName, int age, String phone,
                                      int jerseyNumber, String specific)
             throws AthleteNotFoundException, InvalidAgeException, ValidationException {
@@ -116,11 +117,22 @@ public class AthleteService implements IAthlteService {
             f.setPlayingPosition(newPosition);
         }
 
+        // Cada registro de la persona se guarda con el update de siempre.
         boolean ok = true;
         for (Athlete a : records) {
             ok &= repository.update(a);
         }
         return ok;
+    }
+
+    @Override
+    public CategoryEnum categoryForAge(int age) throws InvalidAgeException {
+        return billingService.determineCategory(age);
+    }
+
+    @Override
+    public double feeForAge(int age) throws InvalidAgeException {
+        return billingService.calculateFee(age);
     }
 
     @Override
