@@ -21,7 +21,7 @@ public abstract class Athlete {
     private String phone;
     private int jerseyNumber;
     private double monthlyFee;
-    private CategoryEnum category;
+    private String categoryName;
 
     /** Estado de la afiliación: true = activo (valor por defecto al registrarse). */
     private boolean active = true;
@@ -131,11 +131,24 @@ public abstract class Athlete {
     }
 
     public CategoryEnum getCategory() {
-        return category;
+        for (CategoryEnum legacyCategory : CategoryEnum.values()) {
+            if (legacyCategory.name().equals(categoryName)) {
+                return legacyCategory;
+            }
+        }
+        return null;
     }
 
     public void setCategory(CategoryEnum category) {
-        this.category = category;
+        setCategoryName(category == null ? null : category.name());
+    }
+
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
     }
 
     // ------------------------------------------------------------------ Estado
@@ -222,7 +235,7 @@ public abstract class Athlete {
     @Override
     public String toString() {
         return getDiscipline() + "{id='" + id + "', fullName='" + fullName + "', age=" + age
-                + ", category=" + category + ", monthlyFee=" + monthlyFee
+                + ", category=" + categoryName + ", monthlyFee=" + monthlyFee
                 + ", active=" + active + ", paidUntil=" + paidUntil + "}";
     }
     

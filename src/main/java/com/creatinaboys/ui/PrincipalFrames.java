@@ -1,12 +1,13 @@
 package com.creatinaboys.ui;
 
-import com.creatinaboys.service.IBillingService;
+import com.creatinaboys.service.CategoryService;
 import com.creatinaboys.service.ICoachService;
 import com.creatinaboys.service.IDisciplineService;
 import com.creatinaboys.service.IHealthService;
 import com.creatinaboys.service.MembershipExpirationPolicy;
 import com.creatinaboys.service.AthleteService;
 import com.creatinaboys.service.ISaleService;
+import com.creatinaboys.service.IDashBoardService;
 
 import com.creatinaboys.ui.components.BrandHeader;
 import com.creatinaboys.ui.components.SidebarButton;
@@ -20,7 +21,6 @@ import com.creatinaboys.ui.panels.HomePanel;
 import com.creatinaboys.ui.panels.PaymentPanel;
 import com.creatinaboys.ui.panels.ReportsPanel;
 import com.creatinaboys.ui.theme.ThemeConstants;
-import com.creatinaboys.service.IDashBoardService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -32,7 +32,7 @@ public class PrincipalFrames extends JFrame {
 
     private final AthleteService athleteService;
     private final ISaleService saleService;
-    private final IBillingService billingService;
+    private final CategoryService categoryService;
     private final IDisciplineService disciplineService;
     private final ICoachService coachService;
     private final IHealthService healthService;
@@ -41,11 +41,8 @@ public class PrincipalFrames extends JFrame {
     private CardLayout cardLayout;
     private JPanel mainContentPanel;
 
-    private final List<SidebarButton> sidebarButtons
-            = new ArrayList<>();
-
-    private final List<String> menuNames
-            = new ArrayList<>();
+    private final List<SidebarButton> sidebarButtons = new ArrayList<>();
+    private final List<String> menuNames = new ArrayList<>();
 
     private HomePanel homePanel;
     private AthleteListPanel athleteListPanel;
@@ -62,14 +59,15 @@ public class PrincipalFrames extends JFrame {
     public PrincipalFrames(
             AthleteService athleteService,
             ISaleService saleService,
-            IBillingService billingService,
+            CategoryService categoryService,
             IDisciplineService disciplineService,
             ICoachService coachService,
-            IHealthService healthService, IDashBoardService dashboardService) {
+            IHealthService healthService,
+            IDashBoardService dashboardService) {
 
         this.athleteService = athleteService;
         this.saleService = saleService;
-        this.billingService = billingService;
+        this.categoryService = categoryService;
         this.disciplineService = disciplineService;
         this.coachService = coachService;
         this.healthService = healthService;
@@ -102,9 +100,7 @@ public class PrincipalFrames extends JFrame {
     }
 
     private void initFrame() {
-        setTitle(
-                "Creatina-Boys - Sports Club Management");
-
+        setTitle("Creatina-Boys - Sports Club Management");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1280, 720);
         setMinimumSize(new Dimension(1024, 600));
@@ -113,26 +109,14 @@ public class PrincipalFrames extends JFrame {
     }
 
     private void initSidebar() {
-
         JPanel sidebar = new JPanel(new BorderLayout());
+        sidebar.setBackground(ThemeConstants.SIDEBAR_BG);
+        sidebar.setPreferredSize(new Dimension(240, 0));
+        sidebar.add(new BrandHeader(), BorderLayout.NORTH);
 
-        sidebar.setBackground(
-                ThemeConstants.SIDEBAR_BG);
-
-        sidebar.setPreferredSize(
-                new Dimension(240, 0));
-
-        sidebar.add(
-                new BrandHeader(),
-                BorderLayout.NORTH);
-
-        JPanel menuPanel = new JPanel(
-                new GridLayout(9, 1, 0, 5));
-
+        JPanel menuPanel = new JPanel(new GridLayout(9, 1, 0, 5));
         menuPanel.setOpaque(false);
-
-        menuPanel.setBorder(
-                new EmptyBorder(10, 10, 10, 10));
+        menuPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
         String[] menuItems = {
             "Inicio",
@@ -147,38 +131,29 @@ public class PrincipalFrames extends JFrame {
         };
 
         for (String name : menuItems) {
-
-            SidebarButton button
-                    = new SidebarButton(name);
+            SidebarButton button = new SidebarButton(name);
 
             sidebarButtons.add(button);
             menuNames.add(name);
 
             String cardName = name.toUpperCase();
 
-            button.addActionListener(e -> {
-
+            button.addActionListener(event -> {
                 try {
-                    boolean newlyCreated
-                            = ensurePanel(cardName);
+                    boolean newlyCreated = ensurePanel(cardName);
 
                     selectSidebarButton(button);
-
-                    cardLayout.show(
-                            mainContentPanel, cardName);
+                    cardLayout.show(mainContentPanel, cardName);
 
                     if (!newlyCreated) {
                         refreshPanel(cardName);
                     }
-
                 } catch (RuntimeException ex) {
-
                     ex.printStackTrace();
 
                     JOptionPane.showMessageDialog(
                             this,
-                            "Unable to open module:\n"
-                            + ex.getMessage(),
+                            "Unable to open module:\n" + ex.getMessage(),
                             "Application Error",
                             JOptionPane.ERROR_MESSAGE
                     );
@@ -189,45 +164,29 @@ public class PrincipalFrames extends JFrame {
         }
 
         selectSidebarButton(sidebarButtons.get(0));
-
         sidebar.add(menuPanel, BorderLayout.CENTER);
 
-        SidebarButton logoutButton
-                = new SidebarButton("Cerrar Sesión");
+        SidebarButton logoutButton = new SidebarButton("Cerrar Sesión");
 
-        logoutButton.addActionListener(e -> {
+        logoutButton.addActionListener(event -> {
             dispose();
             onLogout.run();
         });
 
-        JPanel logoutWrap
-                = new JPanel(new BorderLayout());
-
+        JPanel logoutWrap = new JPanel(new BorderLayout());
         logoutWrap.setOpaque(false);
+        logoutWrap.setBorder(new EmptyBorder(0, 10, 16, 10));
+        logoutWrap.add(logoutButton, BorderLayout.CENTER);
 
-        logoutWrap.setBorder(
-                new EmptyBorder(0, 10, 16, 10));
-
-        logoutWrap.add(
-                logoutButton,
-                BorderLayout.CENTER);
-
-        sidebar.add(
-                logoutWrap,
-                BorderLayout.SOUTH);
-
+        sidebar.add(logoutWrap, BorderLayout.SOUTH);
         add(sidebar, BorderLayout.WEST);
     }
 
     private void initMainContent() {
-
         cardLayout = new CardLayout();
 
-        mainContentPanel
-                = new JPanel(cardLayout);
-
-        mainContentPanel.setBackground(
-                ThemeConstants.MAIN_BG);
+        mainContentPanel = new JPanel(cardLayout);
+        mainContentPanel.setBackground(ThemeConstants.MAIN_BG);
 
         // Load only the home panel at startup.
         homePanel = new HomePanel(
@@ -235,172 +194,121 @@ public class PrincipalFrames extends JFrame {
                 this::navigateTo
         );
 
-        mainContentPanel.add(
-                homePanel, "INICIO");
-
+        mainContentPanel.add(homePanel, "INICIO");
         add(mainContentPanel, BorderLayout.CENTER);
     }
 
     private boolean ensurePanel(String cardName) {
-
         switch (cardName) {
-
             case "INICIO":
                 return false;
 
             case "DEPORTISTAS":
-
                 if (athleteListPanel == null) {
-
                     athleteService.applyActivationPolicy(
                             new MembershipExpirationPolicy(5));
 
-                    athleteListPanel
-                            = new AthleteListPanel(
-                                    athleteService,
-                                    saleService);
+                    athleteListPanel = new AthleteListPanel(
+                            athleteService,
+                            saleService
+                    );
 
-                    mainContentPanel.add(
-                            athleteListPanel,
-                            cardName);
-
+                    mainContentPanel.add(athleteListPanel, cardName);
                     return true;
                 }
                 return false;
 
             case "REGISTRAR":
-
                 if (registerPanel == null) {
+                    registerPanel = new AthleteRegisterPanel(athleteService);
 
-                    registerPanel
-                            = new AthleteRegisterPanel(
-                                    athleteService);
-
-                    mainContentPanel.add(
-                            registerPanel,
-                            cardName);
-
+                    mainContentPanel.add(registerPanel, cardName);
                     return true;
                 }
                 return false;
 
             case "CATEGORÍAS":
-
                 if (categoryPanel == null) {
+                    categoryPanel = new CategoryPanel(
+                            athleteService,
+                            categoryService,
+                            disciplineService
+                    );
 
-                    categoryPanel
-                            = new CategoryPanel(
-                                    athleteService,
-                                    billingService,
-                                    disciplineService);
-
-                    mainContentPanel.add(
-                            categoryPanel,
-                            cardName);
-
+                    mainContentPanel.add(categoryPanel, cardName);
                     return true;
                 }
                 return false;
 
             case "DISCIPLINAS":
-
                 if (disciplinePanel == null) {
+                    disciplinePanel = new DisciplinePanel(
+                            athleteService,
+                            disciplineService
+                    );
 
-                    disciplinePanel
-                            = new DisciplinePanel(
-                                    athleteService,
-                                    disciplineService);
-
-                    mainContentPanel.add(
-                            disciplinePanel,
-                            cardName);
-
+                    mainContentPanel.add(disciplinePanel, cardName);
                     return true;
                 }
                 return false;
 
             case "ENTRENADORES":
-
                 if (coachPanel == null) {
+                    coachPanel = new CoachPanel(coachService);
 
-                    coachPanel
-                            = new CoachPanel(coachService);
-
-                    mainContentPanel.add(
-                            coachPanel,
-                            cardName);
-
+                    mainContentPanel.add(coachPanel, cardName);
                     return true;
                 }
                 return false;
 
             case "SALUD":
-
                 if (healthPanel == null) {
+                    healthPanel = new HealthPanel(
+                            athleteService,
+                            healthService
+                    );
 
-                    healthPanel
-                            = new HealthPanel(
-                                    athleteService,
-                                    healthService);
-
-                    mainContentPanel.add(
-                            healthPanel,
-                            cardName);
-
+                    mainContentPanel.add(healthPanel, cardName);
                     return true;
                 }
                 return false;
 
             case "PAGOS":
-
                 if (paymentPanel == null) {
+                    paymentPanel = new PaymentPanel(
+                            athleteService,
+                            saleService
+                    );
 
-                    paymentPanel
-                            = new PaymentPanel(
-                                    athleteService,
-                                    saleService);
-
-                    mainContentPanel.add(
-                            paymentPanel,
-                            cardName);
-
+                    mainContentPanel.add(paymentPanel, cardName);
                     return true;
                 }
                 return false;
 
             case "REPORTES":
-
                 if (reportsPanel == null) {
+                    reportsPanel = new ReportsPanel(
+                            athleteService,
+                            saleService
+                    );
 
-                    reportsPanel
-                            = new ReportsPanel(
-                                    athleteService,
-                                    saleService);
-
-                    mainContentPanel.add(
-                            reportsPanel,
-                            cardName);
-
+                    mainContentPanel.add(reportsPanel, cardName);
                     return true;
                 }
                 return false;
 
             default:
-                throw new IllegalArgumentException(
-                        "Unknown module: " + cardName);
+                throw new IllegalArgumentException("Unknown module: " + cardName);
         }
     }
 
     private void refreshPanel(String cardName) {
-
         switch (cardName) {
-
             case "INICIO":
                 homePanel.refresh();
                 break;
 
             case "DEPORTISTAS":
-
                 athleteService.applyActivationPolicy(
                         new MembershipExpirationPolicy(5));
 
@@ -436,9 +344,7 @@ public class PrincipalFrames extends JFrame {
         }
     }
 
-    private void selectSidebarButton(
-            SidebarButton selected) {
-
+    private void selectSidebarButton(SidebarButton selected) {
         for (SidebarButton button : sidebarButtons) {
             button.setActive(button == selected);
         }

@@ -1,4 +1,3 @@
-
 package com.creatinaboys.repository;
 
 import com.creatinaboys.conection.conection;
@@ -216,10 +215,7 @@ public class PostgresAthleteRepository
 
                     ps.setInt(1, athlete.getJerseyNumber());
                     ps.setDouble(2, athlete.getMonthlyFee());
-                    ps.setString(3,
-                            athlete.getCategory() == null
-                            ? null
-                            : athlete.getCategory().name());
+                    ps.setString(3, athlete.getCategoryName());
 
                     ps.setBoolean(4, athlete.isActive());
                     ps.setBoolean(5,
@@ -312,10 +308,7 @@ public class PostgresAthleteRepository
         ps.setInt(3, a.getJerseyNumber());
         ps.setDouble(4, a.getMonthlyFee());
 
-        ps.setString(5,
-                a.getCategory() == null
-                ? null
-                : a.getCategory().name());
+        ps.setString(5, a.getCategoryName());
 
         ps.setBoolean(6, a.isActive());
         ps.setBoolean(7, a.isManualOverride());
@@ -374,12 +367,7 @@ public class PostgresAthleteRepository
         atleta.setMonthlyFee(
                 rs.getDouble("monthly_fee"));
 
-        String categoria = rs.getString("category");
-
-        if (categoria != null) {
-            atleta.setCategory(
-                    CategoryEnum.valueOf(categoria));
-        }
+        atleta.setCategoryName(rs.getString("category"));
 
         boolean activo = rs.getBoolean("active");
 

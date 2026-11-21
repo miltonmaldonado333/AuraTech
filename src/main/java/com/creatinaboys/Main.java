@@ -1,6 +1,5 @@
 package com.creatinaboys;
 
-import com.creatinaboys.repository.PostgresAthleteRepository;
 import com.creatinaboys.repository.FileCoachRepository;
 import com.creatinaboys.repository.FileHealthRepository;
 import com.creatinaboys.repository.FilePaymentRepository;
@@ -9,32 +8,33 @@ import com.creatinaboys.repository.IAthleteRepository;
 import com.creatinaboys.repository.ICoachRepository;
 import com.creatinaboys.repository.IHealthRepository;
 import com.creatinaboys.repository.IPaymentRepository;
+import com.creatinaboys.repository.PostgresAthleteRepository;
+import com.creatinaboys.repository.PostgresCategoryRepository;
 
 import com.creatinaboys.service.AthleteService;
 import com.creatinaboys.service.Authservice;
 import com.creatinaboys.service.BillingService;
+import com.creatinaboys.service.CategoryService;
 import com.creatinaboys.service.CoachService;
+import com.creatinaboys.service.DashboardService;
 import com.creatinaboys.service.DisciplineService;
 import com.creatinaboys.service.HealthService;
 import com.creatinaboys.service.IAuthService;
 import com.creatinaboys.service.IBillingService;
 import com.creatinaboys.service.ICoachService;
+import com.creatinaboys.service.IDashBoardService;
 import com.creatinaboys.service.IDisciplineService;
 import com.creatinaboys.service.IHealthService;
 import com.creatinaboys.service.ISaleService;
 import com.creatinaboys.service.PaymentDisciplineMigration;
 import com.creatinaboys.service.SaleService;
-import com.creatinaboys.repository.PostgresCategoryRepository;
-import com.creatinaboys.service.CategoryService;
-
-// Dashboard optimization
-import com.creatinaboys.service.DashboardService;
-import com.creatinaboys.service.IDashBoardService;
 
 import com.creatinaboys.ui.LoginFrame;
 import com.creatinaboys.ui.PrincipalFrames;
 
-import javax.swing.*;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import java.util.function.Supplier;
 
 /**
@@ -58,27 +58,27 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
 
             // Initialize repositories.
-            IAthleteRepository repository
-                    = new PostgresAthleteRepository();
+            IAthleteRepository repository =
+                    new PostgresAthleteRepository();
 
-            IPaymentRepository paymentRepository
-                    = new FilePaymentRepository();
+            IPaymentRepository paymentRepository =
+                    new FilePaymentRepository();
 
-            ICoachRepository coachRepository
-                    = new FileCoachRepository();
+            ICoachRepository coachRepository =
+                    new FileCoachRepository();
 
-            IHealthRepository healthRepository
-                    = new FileHealthRepository();
+            IHealthRepository healthRepository =
+                    new FileHealthRepository();
 
             // Initialize shared services.
-            CategoryService categoryService
-                    = new CategoryService(new PostgresCategoryRepository());
+            CategoryService categoryService =
+                    new CategoryService(new PostgresCategoryRepository());
 
-            IBillingService billingService
-                    = new BillingService(categoryService);
+            IBillingService billingService =
+                    new BillingService(categoryService);
 
-            IDisciplineService disciplineService
-                    = new DisciplineService();
+            IDisciplineService disciplineService =
+                    new DisciplineService();
 
             // Migrate legacy payment disciplines.
             try {
@@ -86,76 +86,67 @@ public class Main {
                         paymentRepository,
                         repository
                 ).run();
-
             } catch (RuntimeException exception) {
-
                 JOptionPane.showMessageDialog(
                         null,
-                        "Unable to update payment history:\n"
-                        + exception.getMessage(),
+                        "Unable to update payment history:\n" + exception.getMessage(),
                         "AuraTech",
                         JOptionPane.WARNING_MESSAGE
                 );
             }
 
-            AthleteService athleteService
-                    = new AthleteService(
+            AthleteService athleteService =
+                    new AthleteService(
                             repository,
                             billingService
                     );
 
-            ISaleService saleService
-                    = new SaleService(
+            ISaleService saleService =
+                    new SaleService(
                             repository,
                             billingService,
                             paymentRepository
                     );
 
-            ICoachService coachService
-                    = new CoachService(coachRepository);
+            ICoachService coachService =
+                    new CoachService(coachRepository);
 
-            IHealthService healthService
-                    = new HealthService(
+            IHealthService healthService =
+                    new HealthService(
                             healthRepository,
                             repository
                     );
 
             // Initialize the dashboard service.
-            IDashBoardService dashboardService
-                    = new DashboardService(
+            IDashBoardService dashboardService =
+                    new DashboardService(
                             repository,
                             paymentRepository,
                             coachService
                     );
 
             // Initialize authentication.
-            IAuthService authService
-                    = new Authservice(
-                            new Fileuserrepository()
-                    );
+            IAuthService authService =
+                    new Authservice(new Fileuserrepository());
 
             try {
                 authService.ensureDefaultUser();
-
             } catch (RuntimeException exception) {
-
                 JOptionPane.showMessageDialog(
                         null,
-                        "Unable to initialize user accounts:\n"
-                        + exception.getMessage(),
+                        "Unable to initialize user accounts:\n" + exception.getMessage(),
                         "AuraTech",
                         JOptionPane.ERROR_MESSAGE
                 );
-
                 return;
             }
 
             // Create the main window after authentication.
-            Supplier<PrincipalFrames> frameFactory = ()
-                    -> new PrincipalFrames(
+            Supplier<PrincipalFrames> frameFactory = () ->
+                    new PrincipalFrames(
                             athleteService,
                             saleService,
-                            billingService,
+                            categoryService,
                             disciplineService,
                             coachService,
                             healthService,
@@ -175,7 +166,6 @@ public class Main {
             Supplier<PrincipalFrames> frameFactory) {
 
         new LoginFrame(authService, username -> {
-
             PrincipalFrames frame = frameFactory.get();
 
             frame.setOnLogout(
@@ -184,7 +174,6 @@ public class Main {
 
             frame.setCurrentUser(username);
             frame.setVisible(true);
-
         }).setVisible(true);
     }
 }

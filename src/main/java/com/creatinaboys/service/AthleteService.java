@@ -10,6 +10,7 @@ import com.creatinaboys.model.Footballer;
 import com.creatinaboys.repository.IAthleteRepository;
 import com.creatinaboys.validation.DataValidator;
 import java.util.ArrayList;
+import com.creatinaboys.model.AgeCategory;
 
 import java.util.List;
 
@@ -41,14 +42,16 @@ public class AthleteService implements IAthlteService {
 
         uniqueness.check(athlete, repository.findAll(), null);
 
-        athlete.setCategory(billingService.determineCategory(athlete.getAge()));
-        athlete.setMonthlyFee(billingService.calculateFee(athlete.getAge()));
+        AgeCategory category = billingService.determineEnrollmentCategory(athlete.getAge());
+        athlete.setCategoryName(category.name());
+        athlete.setMonthlyFee(category.monthlyFee().doubleValue());
+
         return repository.save(athlete);
     }
 
-       @Override
+    @Override
     public boolean updateAthleteData(AthleteKey key, String fullName, int age, String phone,
-                                     int jerseyNumber, String specific)
+            int jerseyNumber, String specific)
             throws AthleteNotFoundException, InvalidAgeException, ValidationException {
         // Mismas reglas de formato que el registro (RNF8).
         DataValidator.validateFullName(fullName);
@@ -159,7 +162,6 @@ public class AthleteService implements IAthlteService {
     }
 
     // ------------------------------------------------------------------ Estado y mensualidad
-
     @Override
     public void applyActivationPolicy(IActivationPolicy policy) {
         for (Athlete a : getAllAthletes()) {

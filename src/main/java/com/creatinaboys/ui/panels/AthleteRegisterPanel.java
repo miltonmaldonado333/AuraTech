@@ -2,6 +2,7 @@ package com.creatinaboys.ui.panels;
 
 import com.creatinaboys.exceptions.DuplicateDataException;
 import com.creatinaboys.exceptions.ValidationException;
+import com.creatinaboys.model.Athlete;
 import com.creatinaboys.model.Basketballer;
 import com.creatinaboys.model.Footballer;
 import com.creatinaboys.service.AthleteService;
@@ -229,16 +230,23 @@ public class AthleteRegisterPanel extends JPanel {
             String discipline = (String) cmbDiscipline.getSelectedItem();
             String specific = required(txtSpecific);
 
+            Athlete athlete;
             if ("Fútbol".equals(discipline)) {
-                Footballer f = new Footballer(id, name, age, phone, jersey, specific);
-                athleteService.registerAthlete(f);
-                showSuccessDialog(f.getCategory().getName(), f.getMonthlyFee());
+                athlete = new Footballer(id, name, age, phone, jersey, specific);
             } else {
                 double height = Double.parseDouble(specific.replace(',', '.'));
-                Basketballer b = new Basketballer(id, name, age, phone, jersey, height);
-                athleteService.registerAthlete(b);
-                showSuccessDialog(b.getCategory().getName(), b.getMonthlyFee());
+                athlete = new Basketballer(id, name, age, phone, jersey, height);
             }
+
+            if (!athleteService.registerAthlete(athlete)) {
+                throw new IllegalStateException("The athlete is already enrolled in this discipline.");
+            }
+
+            String categoryLabel = athlete.getCategory() == null
+                    ? athlete.getCategoryName()
+                    : SpanishLabels.of(athlete.getCategoryName());
+
+            showSuccessDialog(categoryLabel, athlete.getMonthlyFee());
             clearForm();
         } catch (NumberFormatException nfe) {
             JOptionPane.showMessageDialog(this, "Por favor, ingresa números válidos para edad, dorsal o estatura.",
@@ -274,7 +282,7 @@ public class AthleteRegisterPanel extends JPanel {
         JOptionPane.showMessageDialog(this,
                 "¡Deportista afiliado correctamente!\n\n" +
                         "• Categoría: " + category + "\n" +
-                        "• Tarifa Mensual: $" + String.format("%,.0f", fee) + " COP",
+                        "• Tarifa Mensual: " + Money.cop(fee) + " COP",
                 "Registro Exitoso", JOptionPane.INFORMATION_MESSAGE);
     }
 
