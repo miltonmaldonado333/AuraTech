@@ -276,11 +276,11 @@ public void refresh() {
             JPanel both = new JPanel(new GridLayout(0, 1, 0, 14));
             both.setOpaque(false);
             both.add(section("POR DISCIPLINA", disciplineBars(athletes)));
-            both.add(section("POR CATEGORÍA", categoryBars(athletes)));
+            both.add(section("POR CATEGORÍA", categoryBars(athletes, data.categories())));
             mid.add(card("Distribución del club", "Deportistas por disciplina y categoría", both));
         } else {
             mid.add(card("Por disciplina", "Deportistas inscritos", disciplineBars(athletes)));
-            mid.add(card("Por categoría", "Deportistas según su edad", categoryBars(athletes)));
+            mid.add(card("Por categoría", "Deportistas según su edad", categoryBars(athletes, data.categories())));
         }
         addRow(mid, row++);
 
@@ -470,10 +470,20 @@ public void refresh() {
         return bars(counts, athletes.size(), "Aún no hay deportistas registrados.");
     }
 
-    private JComponent categoryBars(List<Athlete> athletes) {
+    /**
+     * Una barra por cada categoría del catálogo (con o sin deportistas) más las categorías
+     * antiguas que aún tengan deportistas. Se agrupa por nombre, no por el enum fijo.
+     */
+    private JComponent categoryBars(List<Athlete> athletes, List<String> catalog) {
         Map<String, Long> counts = new LinkedHashMap<>();
-        for (CategoryEnum c : CategoryEnum.values()) {
-            counts.put(SpanishLabels.of(c.getName()), athletes.stream().filter(a -> c.equals(a.getCategory())).count());
+        for (String name : catalog) {
+            counts.putIfAbsent(SpanishLabels.of(name), 0L);
+        }
+        for (Athlete a : athletes) {
+            String name = a.getCategoryName();
+            if (name != null && !name.isBlank()) {
+                counts.merge(SpanishLabels.of(name), 1L, Long::sum);
+            }
         }
         return bars(counts, athletes.size(), "Aún no hay deportistas registrados.");
     }
@@ -529,7 +539,7 @@ public void refresh() {
             }
             double owed = Math.max(0, a.getMonthlyFee() - paidMap.getOrDefault(a.getKey(), 0.0));
             list.add(personRow(a.getFullName(), SpanishLabels.of(a.getDiscipline()) + "  ·  "
-                    + SpanishLabels.of(a.getCategory() == null ? null : a.getCategory().getName()),
+                    + SpanishLabels.of(a.getCategoryName()),
                     Money.cop(owed), ThemeConstants.DANGER_RED, AMBER));
         }
         if (pending.size() > 5) {

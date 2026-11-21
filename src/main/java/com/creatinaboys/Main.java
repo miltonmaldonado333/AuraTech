@@ -122,7 +122,8 @@ public class Main {
                     new DashboardService(
                             repository,
                             paymentRepository,
-                            coachService
+                            coachService,
+                            categoryService
                     );
 
             // Initialize authentication.

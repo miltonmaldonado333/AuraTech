@@ -247,11 +247,12 @@ public class ReportsPanel extends JPanel {
         revenueContent.add(Box.createVerticalStrut(10));
         revenueContent.add(sectionLabel("POR CATEGORÍA"));
         revenueContent.add(Box.createVerticalStrut(8));
-        Map<CategoryEnum, Double> byCategory = saleService.getRevenueByCategory();
-        for (CategoryEnum category : CategoryEnum.values()) {
-            addRevenueRow(SpanishLabels.of(category.getName()), byCategory.getOrDefault(category, 0.0),
-                    total, ThemeConstants.PRIMARY_INDIGO);
-        }
+        Map<String, Double> byCategory = new java.util.LinkedHashMap<>();
+        saleService.getRevenueByCategoryName()
+                .forEach((name, amount) -> byCategory.merge(SpanishLabels.of(name), amount, Double::sum));
+        byCategory.entrySet().stream()
+                .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                .forEach(e -> addRevenueRow(e.getKey(), e.getValue(), total, ThemeConstants.PRIMARY_INDIGO));
 
         revenueContent.revalidate();
         revenueContent.repaint();

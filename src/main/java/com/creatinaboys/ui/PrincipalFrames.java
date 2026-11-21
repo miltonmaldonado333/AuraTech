@@ -244,7 +244,8 @@ public class PrincipalFrames extends JFrame {
                 if (disciplinePanel == null) {
                     disciplinePanel = new DisciplinePanel(
                             athleteService,
-                            disciplineService
+                            disciplineService,
+                            categoryService
                     );
 
                     mainContentPanel.add(disciplinePanel, cardName);

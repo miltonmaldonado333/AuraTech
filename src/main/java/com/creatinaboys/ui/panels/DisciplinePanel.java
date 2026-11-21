@@ -37,6 +37,7 @@ public class DisciplinePanel extends JPanel {
 
     private final AthleteService athleteService;
     private final IDisciplineService disciplineService;
+    private final com.creatinaboys.service.CategoryService categoryService;
 
     private final JPanel grid = new JPanel(new GridLayout(0, 2, 18, 18));
     private final JLabel lblSummary = new JLabel();
@@ -44,8 +45,14 @@ public class DisciplinePanel extends JPanel {
     private PlaceholderTextField txtName;
 
     public DisciplinePanel(AthleteService athleteService, IDisciplineService disciplineService) {
+        this(athleteService, disciplineService, null);
+    }
+
+    public DisciplinePanel(AthleteService athleteService, IDisciplineService disciplineService,
+                           com.creatinaboys.service.CategoryService categoryService) {
         this.athleteService = athleteService;
         this.disciplineService = disciplineService;
+        this.categoryService = categoryService;
 
         setLayout(new BorderLayout());
         setBackground(ThemeConstants.MAIN_BG);
@@ -152,10 +159,18 @@ public class DisciplinePanel extends JPanel {
             feedback("No se pudo leer el catálogo: " + e.getMessage(), false);
         }
         List<Athlete> athletes = athleteService.getAllAthletes();
+        List<String> categoryNames = new java.util.ArrayList<>();
+        if (categoryService != null) {
+            try {
+                categoryService.getCategories().forEach(c -> categoryNames.add(c.name()));
+            } catch (RuntimeException e) {
+                // Sin catálogo se muestran solo las categorías que ya tienen deportistas.
+            }
+        }
         lblSummary.setText(disciplines.size() + " disciplinas · " + athletes.size() + " deportistas");
 
         for (int i = 0; i < disciplines.size(); i++) {
-            grid.add(buildCard(disciplines.get(i), athletes, ACCENTS[i % ACCENTS.length]));
+            grid.add(buildCard(disciplines.get(i), athletes, categoryNames, ACCENTS[i % ACCENTS.length]));
         }
         if (disciplines.size() % 2 == 1) {
             JPanel filler = new JPanel();
@@ -166,7 +181,7 @@ public class DisciplinePanel extends JPanel {
         grid.repaint();
     }
 
-    private JComponent buildCard(String discipline, List<Athlete> all, Color accent) {
+    private JComponent buildCard(String discipline, List<Athlete> all, List<String> categoryNames, Color accent) {
         List<Athlete> members = all.stream()
                 .filter(a -> discipline.equalsIgnoreCase(a.getDiscipline()))
                 .toList();
@@ -197,9 +212,18 @@ public class DisciplinePanel extends JPanel {
         content.add(label("POR CATEGORÍA", ThemeConstants.FONT_SECTION, ThemeConstants.PLACEHOLDER));
         content.add(Box.createVerticalStrut(10));
 
-        for (CategoryEnum category : CategoryEnum.values()) {
-            long n = members.stream().filter(a -> a.getCategory() == category).count();
-            content.add(categoryRow(SpanishLabels.of(category.getName()), n, members.size(), accent));
+        // Categorías del catálogo + las antiguas que aún tengan deportistas, agrupadas por nombre.
+        java.util.Map<String, Long> byCategory = new java.util.LinkedHashMap<>();
+        for (String name : categoryNames) {
+            byCategory.putIfAbsent(SpanishLabels.of(name), 0L);
+        }
+        for (Athlete a : members) {
+            if (a.getCategoryName() != null && !a.getCategoryName().isBlank()) {
+                byCategory.merge(SpanishLabels.of(a.getCategoryName()), 1L, Long::sum);
+            }
+        }
+        for (java.util.Map.Entry<String, Long> e : byCategory.entrySet()) {
+            content.add(categoryRow(e.getKey(), e.getValue(), members.size(), accent));
             content.add(Box.createVerticalStrut(10));
         }
 

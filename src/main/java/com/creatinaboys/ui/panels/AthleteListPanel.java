@@ -4,6 +4,7 @@ import com.creatinaboys.exceptions.DuplicateDataException;
 import com.creatinaboys.exceptions.InvalidAgeException;
 import com.creatinaboys.exceptions.ValidationException;
 import com.creatinaboys.validation.DataValidator;
+import com.creatinaboys.model.AgeCategory;
 import com.creatinaboys.model.Athlete;
 import com.creatinaboys.model.AthleteKey;
 import com.creatinaboys.model.Basketballer;
@@ -354,8 +355,7 @@ public class AthleteListPanel extends JPanel {
                     || SearchText.contains(a.getId(), q)
                     || SearchText.contains(a.getFullName(), q)
                     || SearchText.contains(SpanishLabels.of(a.getDiscipline()), q)
-                    || SearchText.contains(a.getCategory() != null
-                            ? SpanishLabels.of(a.getCategory().getName()) : "Sin categoría", q))
+                    || SearchText.contains(SpanishLabels.of(a.getCategoryName()), q))
                     .collect(Collectors.toList());
         }
         refresh();
@@ -378,7 +378,7 @@ public class AthleteListPanel extends JPanel {
                 a.getId(),
                 a.getFullName(),
                 String.valueOf(a.getAge()),
-                a.getCategory() != null ? SpanishLabels.of(a.getCategory().getName()) : "Sin categoría",
+                SpanishLabels.of(a.getCategoryName()),
                 SpanishLabels.of(a.getDiscipline()),
                 a.getPaidUntil().format(DATE_FMT),
                 a.isActive() ? STATUS_ACTIVE : STATUS_INACTIVE,
@@ -541,7 +541,7 @@ public class AthleteListPanel extends JPanel {
 
         addSection("INFORMACIÓN DEPORTIVA");
         addRow("Disciplina", SpanishLabels.of(a.getDiscipline()));
-        addRow("Categoría", a.getCategory() != null ? SpanishLabels.of(a.getCategory().getName()) : "Sin categoría");
+        addRow("Categoría", SpanishLabels.of(a.getCategoryName()));
         addRow("Dorsal", String.valueOf(a.getJerseyNumber()));
         if (a instanceof Footballer f) {
             addRow("Posición", f.getPlayingPosition());
@@ -733,19 +733,38 @@ public class AthleteListPanel extends JPanel {
             }
 
             // 3) Si la nueva edad cambia categoría o mensualidad, se avisa antes de guardar.
+            //    Si la edad cae en varias categorías, primero se pregunta en cuál desea estar.
+            String chosenCategory = null;
             if (age != a.getAge()) {
                 try {
-                    CategoryEnum newCategory = athleteService.categoryForAge(age);
-                    double newFee = athleteService.feeForAge(age);
-                    boolean categoryChanged = newCategory != a.getCategory();
+                    List<AgeCategory> options = athleteService.categoryOptionsForAge(age);
+                    AgeCategory newCategory;
+                    if (options.size() > 1) {
+                        newCategory = CategoryChooser.ask(this, age, options, a.getCategoryName());
+                        if (newCategory == null) {
+                            focusTarget = txtAge;
+                            continue;
+                        }
+                    } else if (options.size() == 1) {
+                        newCategory = options.get(0);
+                    } else {
+                        JOptionPane.showMessageDialog(this,
+                                "No hay una categoría configurada para la edad " + age + ".",
+                                "Datos inválidos", JOptionPane.WARNING_MESSAGE);
+                        focusTarget = txtAge;
+                        continue;
+                    }
+                    chosenCategory = newCategory.name();
+
+                    double newFee = newCategory.monthlyFee().doubleValue();
+                    boolean categoryChanged = !newCategory.name().equals(a.getCategoryName());
                     boolean feeChanged = Double.compare(newFee, a.getMonthlyFee()) != 0;
                     if (categoryChanged || feeChanged) {
                         boolean otherDisciplines = allAthletes.stream().anyMatch(
                                 x -> x.getId().equals(a.getId()) && !x.getKey().equals(a.getKey()));
-                        String oldLabel = a.getCategory() != null
-                                ? SpanishLabels.of(a.getCategory().getName()) : "Sin categoría";
                         String message = "Al cambiar la edad de " + a.getAge() + " a " + age + " años:\n\n"
-                                + "• Categoría: " + oldLabel + " → " + SpanishLabels.of(newCategory.getName()) + "\n"
+                                + "• Categoría: " + SpanishLabels.of(a.getCategoryName()) + " → "
+                                + SpanishLabels.of(newCategory.name()) + "\n"
                                 + "• Mensualidad: " + Money.cop(a.getMonthlyFee()) + " → " + Money.cop(newFee)
                                 + (otherDisciplines
                                         ? "\n\nEl cambio también se aplica a las otras disciplinas de esta persona."
@@ -768,7 +787,7 @@ public class AthleteListPanel extends JPanel {
 
             // 4) Guardar
             try {
-                athleteService.updateAthleteData(a.getKey(), newName, age, newPhone, jersey, newSpecific);
+                athleteService.updateAthleteData(a.getKey(), newName, age, newPhone, jersey, newSpecific, chosenCategory);
                 loadAthleteData();
                 JOptionPane.showMessageDialog(this, "Datos actualizados correctamente.",
                         "Actualizado", JOptionPane.INFORMATION_MESSAGE);
