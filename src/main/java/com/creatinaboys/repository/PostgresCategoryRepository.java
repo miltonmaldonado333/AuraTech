@@ -38,7 +38,7 @@ public class PostgresCategoryRepository implements ICategoryRepository {
         try (var connection = conection.conectar();
              var statement = connection.prepareStatement(SELECT_CATEGORIES);
              var rows = statement.executeQuery()) {
-
+ 
             List<AgeCategory> categories = new ArrayList<>();
 
             while (rows.next()) {
