@@ -1,5 +1,8 @@
 package com.creatinaboys.ui.panels;
 
+import com.creatinaboys.exceptions.InvalidAgeException;
+import com.creatinaboys.exceptions.ValidationException;
+import com.creatinaboys.validation.DataValidator;
 import com.creatinaboys.model.Athlete;
 import com.creatinaboys.model.AthleteKey;
 import com.creatinaboys.model.Basketballer;
@@ -279,12 +282,17 @@ public class AthleteListPanel extends JPanel {
                 ModernButton.Style.SECONDARY, 210);
         btnToggle.addActionListener(e -> toggleSelectedStatus());
 
+        ModernButton btnEdit = new ModernButton("Editar", Type.EDIT,
+                ModernButton.Style.SECONDARY, 130);
+        btnEdit.addActionListener(e -> editSelectedAthlete());
+
         ModernButton btnDelete = new ModernButton("Eliminar Seleccionado", Type.TRASH,
                 ModernButton.Style.DANGER, 220);
         btnDelete.addActionListener(e -> deleteSelectedAthlete());
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actions.setOpaque(false);
+        actions.add(btnEdit);
         actions.add(btnToggle);
         actions.add(btnDelete);
 
@@ -637,6 +645,52 @@ public class AthleteListPanel extends JPanel {
         if (confirm == JOptionPane.YES_OPTION) {
             athleteService.toggleAthleteStatus(a.getKey());
             loadAthleteData();
+        }
+    }
+
+    /** RF1: edita nombre, edad y teléfono del deportista seleccionado. */
+    private void editSelectedAthlete() {
+        Athlete a = athleteAtRow(table.getSelectedRow());
+        if (a == null) {
+            JOptionPane.showMessageDialog(this, "Selecciona un deportista de la tabla para editar sus datos.",
+                    "Ninguna Selección", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JTextField txtName = new JTextField(a.getFullName(), 22);
+        JTextField txtAge = new JTextField(String.valueOf(a.getAge()), 22);
+        JTextField txtPhone = new JTextField(a.getPhone(), 22);
+
+        JPanel form = new JPanel(new GridLayout(0, 1, 0, 6));
+        form.add(new JLabel("Documento: " + a.getId() + " (no editable)"));
+        form.add(new JLabel("Nombre completo"));
+        form.add(txtName);
+        form.add(new JLabel("Edad"));
+        form.add(txtAge);
+        form.add(new JLabel("Teléfono"));
+        form.add(txtPhone);
+
+        while (true) {
+            int option = JOptionPane.showConfirmDialog(this, form, "Editar datos personales",
+                    JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+            if (option != JOptionPane.OK_OPTION) {
+                return;
+            }
+            try {
+                int age = DataValidator.parseAge(txtAge.getText());
+                athleteService.updatePersonalData(a.getKey(), txtName.getText(), age, txtPhone.getText());
+                loadAthleteData();
+                JOptionPane.showMessageDialog(this, "Datos actualizados correctamente.",
+                        "Actualizado", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            } catch (ValidationException | InvalidAgeException ex) {
+                JOptionPane.showMessageDialog(this, ex.getMessage(),
+                        "Datos inválidos", JOptionPane.WARNING_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "No se pudo actualizar: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
         }
     }
 
