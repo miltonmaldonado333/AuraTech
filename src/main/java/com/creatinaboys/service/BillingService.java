@@ -28,6 +28,17 @@ public class BillingService implements IBillingService {
     }
 
     @Override
+    public java.util.List<AgeCategory> findEnrollmentCategories(int age) throws InvalidAgeException {
+        if (age < DataValidator.MIN_AGE || age > DataValidator.MAX_AGE) {
+            throw new InvalidAgeException(age);
+        }
+
+        return categoryService.getCategories().stream()
+                .filter(category -> category.ages().contains(age))
+                .toList();
+    }
+
+    @Override
     public CategoryEnum determineCategory(int age) throws InvalidAgeException {
         if (age >= 5 && age <= 12) {
             return CategoryEnum.CHILDREN;

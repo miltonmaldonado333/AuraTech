@@ -29,6 +29,12 @@ public class AthleteService implements IAthlteService {
 
     @Override
     public boolean registerAthlete(Athlete athlete) throws InvalidAgeException, ValidationException {
+        return registerAthlete(athlete, null);
+    }
+
+    @Override
+    public boolean registerAthlete(Athlete athlete, String categoryName)
+            throws InvalidAgeException, ValidationException {
         // Formato de los datos (RNF8): ninguna pantalla puede saltarse estas reglas.
         // La edad menor de 5 la rechaza BillingService con InvalidAgeException.
         DataValidator.validateId(athlete.getId());
@@ -44,7 +50,7 @@ public class AthleteService implements IAthlteService {
 
         uniqueness.check(athlete, repository.findAll(), null);
 
-        AgeCategory category = billingService.determineEnrollmentCategory(athlete.getAge());
+        AgeCategory category = resolveCategory(athlete.getAge(), categoryName);
         athlete.setCategoryName(category.name());
         athlete.setMonthlyFee(category.monthlyFee().doubleValue());
 
@@ -54,6 +60,13 @@ public class AthleteService implements IAthlteService {
     @Override
     public boolean updateAthleteData(AthleteKey key, String fullName, int age, String phone,
             int jerseyNumber, String specific)
+            throws AthleteNotFoundException, InvalidAgeException, ValidationException {
+        return updateAthleteData(key, fullName, age, phone, jerseyNumber, specific, null);
+    }
+
+    @Override
+    public boolean updateAthleteData(AthleteKey key, String fullName, int age, String phone,
+            int jerseyNumber, String specific, String categoryName)
             throws AthleteNotFoundException, InvalidAgeException, ValidationException {
         // Mismas reglas de formato que el registro (RNF8).
         DataValidator.validateFullName(fullName);
@@ -104,13 +117,19 @@ public class AthleteService implements IAthlteService {
             records.add(target);
         }
 
+        // La categoría solo se recalcula si cambió la edad; si no, se conserva la actual
+        // (y su tarifa), así editar un teléfono no reasigna a nadie de categoría.
+        boolean ageChanged = age != target.getAge();
+        AgeCategory newCategory = ageChanged ? resolveCategory(age, categoryName) : null;
+
         for (Athlete a : records) {
             a.setFullName(newName);
             a.setAge(age);
             a.setPhone(newPhone);
-            // La edad define categoría y mensualidad.
-            a.setCategory(billingService.determineCategory(age));
-            a.setMonthlyFee(billingService.calculateFee(age));
+            if (newCategory != null) {
+                a.setCategoryName(newCategory.name());
+                a.setMonthlyFee(newCategory.monthlyFee().doubleValue());
+            }
         }
 
         // Datos propios de este registro.
@@ -127,6 +146,40 @@ public class AthleteService implements IAthlteService {
             ok &= repository.update(a);
         }
         return ok;
+    }
+
+    @Override
+    public List<AgeCategory> categoryOptionsForAge(int age) throws InvalidAgeException {
+        return billingService.findEnrollmentCategories(age);
+    }
+
+    /**
+     * Elige la categoría de la edad. Si hay una sola se usa; si hay varias, la persona
+     * debe haber elegido una (categoryName). Nunca se adivina.
+     */
+    private AgeCategory resolveCategory(int age, String categoryName)
+            throws InvalidAgeException, ValidationException {
+        List<AgeCategory> options = billingService.findEnrollmentCategories(age);
+
+        if (options.isEmpty()) {
+            throw new com.creatinaboys.exceptions.PersistenceException(
+                    "No category is configured for age " + age + ".");
+        }
+
+        if (categoryName != null && !categoryName.isBlank()) {
+            return options.stream()
+                    .filter(option -> option.name().equals(categoryName))
+                    .findFirst()
+                    .orElseThrow(() -> new ValidationException(
+                            "La categoría \"" + categoryName + "\" no incluye la edad " + age + "."));
+        }
+
+        if (options.size() > 1) {
+            throw new ValidationException("La edad " + age
+                    + " pertenece a varias categorías. Elige en cuál desea estar.");
+        }
+
+        return options.get(0);
     }
 
     @Override
