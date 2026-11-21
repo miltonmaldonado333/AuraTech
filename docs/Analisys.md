@@ -3,7 +3,7 @@
 ## 1. Problem Statement
 
 Creatina-Boys Sports Club manages athlete memberships, enrollment by discipline
-(football and basketball) and monthly fees manually. This causes wrong age
+(football, basketball and any other discipline the club adds) and monthly fees manually. This causes wrong age
 category assignment, inconsistent fee collection and no consolidated reports.
 
 The system (AuraTech) is a Java Swing desktop application that registers athletes, assigns their
@@ -12,7 +12,11 @@ club's reports. Access is protected with a user account.
 
 ## 2. Business Rules
 
-### 2.1 Fee matrix
+### 2.1 Fee matrix and category catalog
+
+Categories are no longer fixed in the code: they are a **catalog stored in PostgreSQL**
+(`age_categories` and `age_category_assignments`) managed by `CategoryService`. The table below is the
+**initial catalog**:
 
 | Category | Age range      | Monthly fee (COP) |
 | :------- | :------------- | :---------------- |
@@ -20,7 +24,12 @@ club's reports. Access is protected with a user account.
 | Youth    | 13 to 17 years | $70.000           |
 | Adults   | 18+ years      | $100.000          |
 
-Athletes younger than 5 years are rejected with `InvalidAgeException`.
+Athletes younger than 5 years (or older than 120) are rejected with `InvalidAgeException`.
+
+- New categories can be created from the *Categories* screen: name of 1 to 40 characters (letters, digits, spaces, dot, hyphen, underscore or apostrophe, with at least one letter or digit), age range inside 5 to 120 with the minimum first, and a monthly fee that is not negative and has at most two decimals. The name must be unique.
+- The ages of the new category are used for **new enrollments**; athletes already enrolled keep their category and fee.
+- When an age belongs to more than one category, the application asks which one the athlete wants (`CategoryChooser`), both when registering and when editing an athlete.
+- If no category is configured for an age, the operation fails with a `PersistenceException`.
 
 ### 2.2 Membership and payments
 
@@ -37,7 +46,8 @@ Athletes younger than 5 years are rejected with `InvalidAgeException`.
 - Full name: letters (accents allowed), spaces, apostrophes and hyphens, 3 to 60 characters.
 - Phone: required for athletes, optional for coaches; when present, 7 to 10 digits.
 - Age: 5 to 120. Jersey number: 0 to 99. Height: 0.5 to 2.5 meters.
-- An identification can only belong to one athlete; registering a duplicate is rejected.
+- The same person can be enrolled in several disciplines: the key of an athlete is identification + discipline. Enrolling the same identification twice in the same discipline, or repeating a jersey number inside a discipline, is rejected with `DuplicateDataException`.
+- Discipline name: 1 to 60 characters (letters, digits, spaces, dot, hyphen, underscore or apostrophe). `Football` and `Basketball` always exist and cannot be added again; aliases such as `futbol`, `soccer`, `baloncesto` or `basquetbol` resolve to them.
 
 ### 2.4 Access rules (`Authservice`)
 
@@ -48,15 +58,16 @@ Athletes younger than 5 years are rejected with `InvalidAgeException`.
 
 ## 3. Functional Requirements (FR)
 
-- **FR1 - Athlete management:** register athletes (id, full name, age, phone, jersey number); list them in a paginated table; activate/deactivate and delete an athlete. *(Editing the personal data of an existing athlete is supported by the repository, but has no service method or screen yet.)*
-- **FR2 - Discipline assignment:** assign an athlete to football or basketball, capturing discipline-specific data (playing position for football, height for basketball). The *Disciplines* screen shows the athletes of each discipline by category and lets the user add a new discipline to the catalog. *(New disciplines are kept in memory only: the athlete form still offers football and basketball, and `FileDisciplineRepository` is not injected in `Main` yet.)*
+- **FR1 - Athlete management:** register athletes (id, full name, age, phone, jersey number); list them in a paginated table; activate/deactivate and delete an athlete; **edit** an existing athlete from the list (*Editar* button): full name, age, phone, jersey number and playing position or height. The identification and the discipline identify the record and cannot be changed; name, age and phone are applied to all the disciplines of the same person (`AthleteService.updateAthleteData`). If the new age falls into several categories, the user is asked which one to use.
+- **FR2 - Discipline assignment:** assign an athlete to a discipline, capturing discipline-specific data (playing position for football, height for basketball). The *Disciplines* screen shows the athletes of each discipline by category and lets the user add a new discipline to the catalog. The catalog is persisted in PostgreSQL (`disciplines` table, `PostgresDisciplineRepository`, injected in `Main` through `DisciplineService`) and the athlete form offers every discipline of the catalog. Athletes of any discipline other than football or basketball are modeled as `GeneralAthlete`, which only uses the shared enrollment fields.
 - **FR3 - Automatic category and fee:** determine the category from the age and assign the monthly fee. The *Categories* screen shows, for each category, its age range, fee, athletes, active athletes and expected income.
+- **FR3.2 - Category catalog management:** create new categories (name, age range and monthly fee) from the *Categories* screen; they are saved in PostgreSQL and used for new enrollments (see 2.1).
 - **FR3.1 - Accent- and case-insensitive search:** the search boxes of the athlete list and the coach list must find records by id, full name, discipline and category regardless of upper/lower case or accents (e.g. `ninos`, `NIÑOS` and `Niños` return the same results; `futbol` finds `Fútbol`). The coach list also searches by phone. An empty query shows all records.
 - **FR4 - Fee payment control:** record full or partial monthly payments, show the status of the month per athlete (Paid, Partial, Pending) and the payment history. Payments are stored in `data/payments.txt`.
 - **FR5 - Coaches:** register, edit, activate/deactivate and delete coaches, and assign each one to a discipline and a category (*Coaches* screen, with search and pagination).
 - **FR6 - Health records:** keep each person's fitness status, restrictions and injury history (the record belongs to the person's id, not to each discipline). Implemented in the *Health* screen (`HealthPanel`), backed by `HealthService` and `FileHealthRepository`, wired in `Main`.
 - **FR7 - Authentication:** log in with a user account, create new accounts and log out (the login window opens again).
-- **FR8 - Dashboard:** the home screen summarizes athletes, income collected and expected, athletes by discipline and category, recent payments and athletes with pending payments, with shortcuts to the main screens.
+- **FR8 - Dashboard:** the home screen summarizes athletes, income collected and expected, athletes by discipline and category (every category of the catalog is listed, even if it has no athletes yet), recent payments and athletes with pending payments, with shortcuts to the main screens.
 - **FR9 - Reports:** projected, collected and pending income, compliance percentage, income by discipline and by category, the pending-payment portfolio and the collection month by month.
 
 ## 4. Non-Functional Requirements (NFR)
@@ -64,18 +75,13 @@ Athletes younger than 5 years are rejected with `InvalidAgeException`.
 - **NFR1 - Platform:** Java (JDK 17) built with Apache Maven; PostgreSQL JDBC driver and HikariCP as dependencies.
 - **NFR2 - User interface:** Java Swing in `com.creatinaboys.ui`: frames (`LoginFrame`, `PrincipalFrames`), one panel per screen (`ui.panels`) and reusable custom components (`ui.components`, `ui.theme`).
 - **NFR3 - Architecture:** 4-layer architecture (`ui`, `service`, `repository`, `model`) plus the cross-cutting packages `exceptions` and `validation`.
-- **NFR4 - Error handling:** custom checked exceptions (`AthleteNotFoundException`, `CoachNotFoundException`, `InvalidAgeException`, `ValidationException`) and the unchecked `PersistenceException` for storage errors.
-- **NFR5 - Persistence:** athletes are stored in a PostgreSQL database (Supabase) through `PostgresAthleteRepository` (tables `athlete_people` and `athletes`) and a HikariCP connection pool (`conection`); the password is read from the `AURATECH_DB_PASSWORD` environment variable. Coaches, payments, users, health records and disciplines are UTF-8 text files in `data/` (`coaches.txt`, `payments.txt`, `users.txt`, `health_records.txt`, `disciplines.txt`), written through a temporary file with a `.bak` copy; invalid lines are skipped without blocking the rest of the file.
+- **NFR4 - Error handling:** custom checked exceptions (`AthleteNotFoundException`, `CoachNotFoundException`, `InvalidAgeException`, `ValidationException` and its subclass `DuplicateDataException`) and the unchecked `PersistenceException` for storage errors.
+- **NFR5 - Persistence:** athletes, the category catalog and the discipline catalog are stored in a PostgreSQL database (Supabase) through `PostgresAthleteRepository` (tables `athlete_people` and `athletes`), `PostgresCategoryRepository` (tables `age_categories` and `age_category_assignments`) and `PostgresDisciplineRepository` (table `disciplines`), with a HikariCP connection pool (`conection`); the password is read from the `AURATECH_DB_PASSWORD` environment variable. Creating a category runs in a single transaction that is rolled back if it fails. Coaches, payments, users and health records are UTF-8 text files in `data/` (`coaches.txt`, `payments.txt`, `users.txt`, `health_records.txt`), written through a temporary file with a `.bak` copy; invalid lines are skipped without blocking the rest of the file. `athletes.txt` and `disciplines.txt` are legacy files that `Main` no longer uses.
 - **NFR6 - Search normalization:** text comparisons for searching are done through `SearchText` (`com.creatinaboys.ui.components`), which trims the text, removes accents (Unicode NFD decomposition without combining marks) and lowercases it with `Locale.ROOT`. The stored data in `data/` is not modified; only the comparison is normalized.
 - **NFR7 - Security:** passwords are never stored in plain text: they are saved with a random salt and hashed with PBKDF2-HMAC-SHA256.
 
 ## 5. Design Principles
 
 - **GRASP:** Controller and Creator (`AthleteService`), Information Expert (`BillingService`, `SaleService`), Low Coupling, High Cohesion.
-- **SOLID:** SRP (one repository per entity, `TextCodec` and `FileStorage` for encoding and file access, `SearchText` only normalizes text), OCP (`Athlete` hierarchy, parser registry and `IActivationPolicy`, which allows new activation rules without changing `AthleteService`), LSP (`Footballer`/`Basketballer`), ISP (small interfaces such as `IBillingService` and `IAthleteRepository`), DIP (services and screens depend on interfaces; `Main` creates and injects the implementations).
+- **SOLID:** SRP (one repository per entity, `TextCodec` and `FileStorage` for encoding and file access, `SearchText` only normalizes text), OCP (`Athlete` hierarchy, parser registry and `IActivationPolicy`, which allows new activation rules without changing `AthleteService`; categories and disciplines are data in the catalogs, so new ones need no code changes, and `GeneralAthlete` covers new disciplines), LSP (`Footballer`/`Basketballer`), ISP (small interfaces such as `IBillingService` and `IAthleteRepository`), DIP (services and screens depend on interfaces such as `ICategoryRepository` and `IDisciplineRepository`; `Main` creates and injects the implementations).
 
-## 6. Pending Work
-
-- Edit screen for an athlete's personal data (FR1).
-- Persist the discipline catalog by injecting `FileDisciplineRepository` in `Main`, and let new disciplines be used when registering athletes (FR2).
-- Move coaches, payments and the other file-based data to the database (athletes are already in PostgreSQL).
