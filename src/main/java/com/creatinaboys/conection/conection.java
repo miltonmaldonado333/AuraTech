@@ -14,7 +14,6 @@ public class conection {
 
     private static final String USER =
             "postgres.fqtaynutgijgkqnydpkn";
-
     private static final HikariDataSource dataSource =
             createDataSource();
 
