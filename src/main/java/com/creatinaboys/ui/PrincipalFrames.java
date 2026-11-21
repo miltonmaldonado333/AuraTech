@@ -220,7 +220,10 @@ public class PrincipalFrames extends JFrame {
 
             case "REGISTRAR":
                 if (registerPanel == null) {
-                    registerPanel = new AthleteRegisterPanel(athleteService);
+                    registerPanel = new AthleteRegisterPanel(
+                            athleteService,
+                            disciplineService
+                    );
 
                     mainContentPanel.add(registerPanel, cardName);
                     return true;
@@ -255,7 +258,7 @@ public class PrincipalFrames extends JFrame {
 
             case "ENTRENADORES":
                 if (coachPanel == null) {
-                    coachPanel = new CoachPanel(coachService);
+                    coachPanel = new CoachPanel(coachService, disciplineService);
 
                     mainContentPanel.add(coachPanel, cardName);
                     return true;

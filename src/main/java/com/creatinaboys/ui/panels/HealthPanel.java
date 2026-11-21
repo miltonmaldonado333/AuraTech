@@ -11,6 +11,7 @@ import com.creatinaboys.service.IHealthService;
 import com.creatinaboys.ui.components.*;
 import com.creatinaboys.ui.components.VectorIcon.Type;
 import com.creatinaboys.ui.theme.ThemeConstants;
+import com.creatinaboys.ui.theme.ModernComboBox;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;

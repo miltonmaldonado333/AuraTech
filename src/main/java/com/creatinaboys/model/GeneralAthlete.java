@@ -3,7 +3,7 @@ package com.creatinaboys.model;
 import com.creatinaboys.exceptions.InvalidAgeException;
 import com.creatinaboys.service.IBillingService;
 
-/** Deportista de una disciplina sin atributos propios (por ejemplo, Beisbol). */
+/** Deportista de una disciplina que usa solo los campos de inscripción compartidos (por ejemplo, Beisbol). */
 public class GeneralAthlete extends Athlete {
 
     private final String discipline;
@@ -15,13 +15,14 @@ public class GeneralAthlete extends Athlete {
     }
 
     @Override
-    public void calculateFee(IBillingService billingService) throws InvalidAgeException {
-        setCategory(billingService.determineCategory(getAge()));
-        setMonthlyFee(billingService.calculateFee(getAge()));
+    public String getDiscipline() {
+        return discipline;
     }
 
     @Override
-    public String getDiscipline() {
-        return discipline;
+    public void calculateFee(IBillingService billingService) throws InvalidAgeException {
+        AgeCategory category = billingService.determineEnrollmentCategory(getAge());
+        setCategoryName(category.name());
+        setMonthlyFee(category.monthlyFee().doubleValue());
     }
 }

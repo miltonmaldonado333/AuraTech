@@ -5,10 +5,13 @@ import com.creatinaboys.exceptions.ValidationException;
 import com.creatinaboys.model.Athlete;
 import com.creatinaboys.model.Basketballer;
 import com.creatinaboys.model.Footballer;
+import com.creatinaboys.model.GeneralAthlete;
 import com.creatinaboys.service.AthleteService;
+import com.creatinaboys.service.IDisciplineService;
 import com.creatinaboys.ui.components.*;
 import com.creatinaboys.ui.components.VectorIcon.Type;
 import com.creatinaboys.ui.theme.ThemeConstants;
+import com.creatinaboys.ui.theme.ModernComboBox;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -22,14 +25,16 @@ import java.awt.*;
 public class AthleteRegisterPanel extends JPanel {
 
     private final AthleteService athleteService;
+    private final IDisciplineService disciplineService;
 
     private PlaceholderTextField txtId, txtName, txtAge, txtPhone, txtJersey, txtSpecific;
     private ModernComboBox cmbDiscipline;
     private InputBox boxSpecific;
     private JLabel lblSpecific;
 
-    public AthleteRegisterPanel(AthleteService athleteService) {
+    public AthleteRegisterPanel(AthleteService athleteService, IDisciplineService disciplineService) {
         this.athleteService = athleteService;
+        this.disciplineService = disciplineService;
 
         setLayout(new BorderLayout());
         setBackground(ThemeConstants.MAIN_BG);
@@ -37,6 +42,7 @@ public class AthleteRegisterPanel extends JPanel {
 
         add(buildHeader(), BorderLayout.NORTH);
         add(buildScrollableForm(), BorderLayout.CENTER);
+        refreshDisciplines();
     }
 
     // ------------------------------------------------------------------ Encabezado
@@ -112,7 +118,7 @@ public class AthleteRegisterPanel extends JPanel {
         txtJersey = field("Ej: 10");
         txtSpecific = field("Ej: Delantero / Volante");
 
-        cmbDiscipline = new ModernComboBox(new String[]{"Fútbol", "Baloncesto"});
+        cmbDiscipline = new ModernComboBox(new String[0], SpanishLabels::discipline);
         cmbDiscipline.addActionListener(e -> updateDisciplineFields());
 
         boxSpecific = new InputBox(Type.FLAG, txtSpecific);
@@ -210,8 +216,29 @@ public class AthleteRegisterPanel extends JPanel {
     }
 
     // ------------------------------------------------------------------ Lógica
+    public void refreshDisciplines() {
+        String selected = (String) cmbDiscipline.getSelectedItem();
+        String previousSpecific = txtSpecific.getText();
+        String[] disciplines = disciplineService.getAvailableDisciplines().toArray(String[]::new);
+        cmbDiscipline.setModel(new DefaultComboBoxModel<>(disciplines));
+        if (selected != null && java.util.Arrays.asList(disciplines).contains(selected)) {
+            cmbDiscipline.setSelectedItem(selected);
+        }
+        updateDisciplineFields();
+        if (selected != null && selected.equals(cmbDiscipline.getSelectedItem())) {
+            txtSpecific.setText(previousSpecific);
+        }
+    }
+
+    private void updateSpecificVisibility() {
+        Object discipline = cmbDiscipline.getSelectedItem();
+        boolean specific = "Football".equals(discipline) || "Basketball".equals(discipline);
+        boxSpecific.getParent().setVisible(specific);
+    }
+
     private void updateDisciplineFields() {
-        boolean football = "Fútbol".equals(cmbDiscipline.getSelectedItem());
+        updateSpecificVisibility();
+        boolean football = "Football".equals(cmbDiscipline.getSelectedItem());
         setRequiredText(lblSpecific, football ? "Posición de juego" : "Estatura (metros, ej: 1.85)");
         txtSpecific.setPlaceholder(football ? "Ej: Delantero / Volante" : "Ej: 1.85");
         boxSpecific.setIcon(football ? Type.FLAG : Type.RULER);
@@ -228,15 +255,16 @@ public class AthleteRegisterPanel extends JPanel {
             String phone = required(txtPhone);
             int jersey = Integer.parseInt(required(txtJersey));
             String discipline = (String) cmbDiscipline.getSelectedItem();
-            String specific = required(txtSpecific);
-
-            Athlete athlete;
-            if ("Fútbol".equals(discipline)) {
-                athlete = new Footballer(id, name, age, phone, jersey, specific);
-            } else {
-                double height = Double.parseDouble(specific.replace(',', '.'));
-                athlete = new Basketballer(id, name, age, phone, jersey, height);
+            if (discipline == null) {
+                throw new IllegalArgumentException("Select a discipline.");
             }
+
+            Athlete athlete = switch (discipline) {
+                case "Football" -> new Footballer(id, name, age, phone, jersey, required(txtSpecific));
+                case "Basketball" -> new Basketballer(id, name, age, phone, jersey,
+                        Double.parseDouble(required(txtSpecific).replace(',', '.')));
+                default -> new GeneralAthlete(id, name, age, phone, jersey, discipline);
+            };
 
             // Si la edad cae en varias categorías, se pregunta en cuál desea estar.
             String chosenCategory = null;
@@ -303,7 +331,9 @@ public class AthleteRegisterPanel extends JPanel {
         for (JTextField f : new JTextField[]{txtId, txtName, txtAge, txtPhone, txtJersey}) {
             f.setText("");
         }
-        cmbDiscipline.setSelectedIndex(0);
+        if (cmbDiscipline.getItemCount() > 0) {
+            cmbDiscipline.setSelectedIndex(0);
+        }
         updateDisciplineFields();
     }
 }

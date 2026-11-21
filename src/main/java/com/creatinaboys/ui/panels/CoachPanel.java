@@ -1,10 +1,13 @@
 package com.creatinaboys.ui.panels;
 
+import com.creatinaboys.exceptions.PersistenceException;
 import com.creatinaboys.model.Coach;
 import com.creatinaboys.service.ICoachService;
+import com.creatinaboys.service.IDisciplineService;
 import com.creatinaboys.ui.components.*;
 import com.creatinaboys.ui.components.VectorIcon.Type;
 import com.creatinaboys.ui.theme.ThemeConstants;
+import com.creatinaboys.ui.panels.CoachFormDialog;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -49,6 +52,7 @@ public class CoachPanel extends JPanel {
     private static final int TRASH_X = 50;    // posición de la papelera
 
     private final ICoachService coachService;
+    private final IDisciplineService disciplineService;
 
     private JTable table;
     private DefaultTableModel tableModel;
@@ -60,8 +64,9 @@ public class CoachPanel extends JPanel {
     private int currentPage = 1;
     private int pageStart = 0;   // índice (en filtered) de la primera fila visible
 
-    public CoachPanel(ICoachService coachService) {
+    public CoachPanel(ICoachService coachService, IDisciplineService disciplineService) {
         this.coachService = coachService;
+        this.disciplineService = disciplineService;
 
         setLayout(new BorderLayout());
         setBackground(ThemeConstants.MAIN_BG);
@@ -284,7 +289,7 @@ public class CoachPanel extends JPanel {
                             || SearchText.contains(c.getId(), q)
                             || SearchText.contains(c.getFullName(), q)
                             || SearchText.contains(c.getPhone(), q)
-                            || SearchText.contains(SpanishLabels.of(c.getDiscipline()), q)
+                            || SearchText.contains(SpanishLabels.discipline(c.getDiscipline()), q)
                             || SearchText.contains(CoachLabels.categoryLabel(c.getCategory()), q))
                     .collect(Collectors.toList());
         } catch (Exception ex) {
@@ -309,7 +314,7 @@ public class CoachPanel extends JPanel {
             tableModel.addRow(new Object[]{
                     c.getId(),
                     c.getFullName(),
-                    SpanishLabels.of(c.getDiscipline()),
+                    SpanishLabels.discipline(c.getDiscipline()),
                     CoachLabels.categoryLabel(c.getCategory()),
                     c.getPhone().isEmpty() ? "—" : c.getPhone(),
                     c.isActive() ? STATUS_ACTIVE : STATUS_INACTIVE,
@@ -400,14 +405,12 @@ public class CoachPanel extends JPanel {
 
     // ------------------------------------------------------------------ Acciones
     private void newCoach() {
-        CoachFormDialog dialog = new CoachFormDialog(SwingUtilities.getWindowAncestor(this), null, coach -> {
+        if (showCoachForm(null, coach -> {
             if (!coachService.registerCoach(coach)) {
                 throw new IllegalStateException(
                         "Ya existe un entrenador registrado con el documento " + coach.getId() + ".");
             }
-        });
-        dialog.setVisible(true);
-        if (dialog.isSaved()) {
+        })) {
             applyFilterKeepingPage();
             JOptionPane.showMessageDialog(this, "Entrenador registrado correctamente.",
                     "Registro Exitoso", JOptionPane.INFORMATION_MESSAGE);
@@ -415,11 +418,25 @@ public class CoachPanel extends JPanel {
     }
 
     private void editCoach(Coach coach) {
-        CoachFormDialog dialog = new CoachFormDialog(SwingUtilities.getWindowAncestor(this), coach,
-                updated -> coachService.updateCoach(updated));
-        dialog.setVisible(true);
-        if (dialog.isSaved()) {
+        if (showCoachForm(coach, coachService::updateCoach)) {
             applyFilterKeepingPage();
+        }
+    }
+
+    private boolean showCoachForm(Coach existing, CoachFormDialog.Saver saver) {
+        try {
+            List<String> disciplines = new ArrayList<>(disciplineService.getAvailableDisciplines());
+            if (existing != null && !disciplines.contains(existing.getDiscipline())) {
+                disciplines.add(existing.getDiscipline());
+            }
+            CoachFormDialog dialog = new CoachFormDialog(
+                    SwingUtilities.getWindowAncestor(this), existing, disciplines, saver);
+            dialog.setVisible(true);
+            return dialog.isSaved();
+        } catch (PersistenceException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(),
+                    "Unable to load disciplines", JOptionPane.ERROR_MESSAGE);
+            return false;
         }
     }
 
