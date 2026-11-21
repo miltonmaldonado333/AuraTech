@@ -282,17 +282,12 @@ public class AthleteListPanel extends JPanel {
                 ModernButton.Style.SECONDARY, 210);
         btnToggle.addActionListener(e -> toggleSelectedStatus());
 
-        ModernButton btnEdit = new ModernButton("Editar", Type.EDIT,
-                ModernButton.Style.SECONDARY, 130);
-        btnEdit.addActionListener(e -> editSelectedAthlete());
-
         ModernButton btnDelete = new ModernButton("Eliminar Seleccionado", Type.TRASH,
                 ModernButton.Style.DANGER, 220);
         btnDelete.addActionListener(e -> deleteSelectedAthlete());
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actions.setOpaque(false);
-        actions.add(btnEdit);
         actions.add(btnToggle);
         actions.add(btnDelete);
 
@@ -537,6 +532,13 @@ public class AthleteListPanel extends JPanel {
         addRow("Edad", a.getAge() + " años");
         addRow("Teléfono", a.getPhone());
 
+        ModernButton btnEditData = new ModernButton("Editar datos", Type.EDIT,
+                ModernButton.Style.SECONDARY, 230);
+        btnEditData.setAlignmentX(LEFT_ALIGNMENT);
+        btnEditData.addActionListener(e -> editSelectedAthlete());
+        dBody.add(Box.createVerticalStrut(8));
+        dBody.add(btnEditData);
+
         addSection("INFORMACIÓN DEPORTIVA");
         addRow("Disciplina", SpanishLabels.of(a.getDiscipline()));
         addRow("Categoría", a.getCategory() != null ? SpanishLabels.of(a.getCategory().getName()) : "Sin categoría");
@@ -648,7 +650,7 @@ public class AthleteListPanel extends JPanel {
         }
     }
 
-    /** RF1: edita nombre, edad y teléfono del deportista seleccionado. */
+    /** RF1: edita todos los datos del deportista seleccionado (el documento y la disciplina no cambian). */
     private void editSelectedAthlete() {
         Athlete a = athleteAtRow(table.getSelectedRow());
         if (a == null) {
@@ -657,33 +659,46 @@ public class AthleteListPanel extends JPanel {
             return;
         }
 
+        boolean basketball = a instanceof Basketballer;
         JTextField txtName = new JTextField(a.getFullName(), 22);
         JTextField txtAge = new JTextField(String.valueOf(a.getAge()), 22);
         JTextField txtPhone = new JTextField(a.getPhone(), 22);
+        JTextField txtJersey = new JTextField(String.valueOf(a.getJerseyNumber()), 22);
+        JTextField txtSpecific = new JTextField(basketball
+                ? String.format(Locale.US, "%.2f", ((Basketballer) a).getHeight())
+                : ((Footballer) a).getPlayingPosition(), 22);
 
         JPanel form = new JPanel(new GridLayout(0, 1, 0, 6));
-        form.add(new JLabel("Documento: " + a.getId() + " (no editable)"));
+        form.add(new JLabel("Documento: " + a.getId() + " — " + SpanishLabels.of(a.getDiscipline())
+                + " (no editable)"));
         form.add(new JLabel("Nombre completo"));
         form.add(txtName);
         form.add(new JLabel("Edad"));
         form.add(txtAge);
         form.add(new JLabel("Teléfono"));
         form.add(txtPhone);
+        form.add(new JLabel("Número de camiseta (dorsal)"));
+        form.add(txtJersey);
+        form.add(new JLabel(basketball ? "Estatura (metros, ej: 1.85)" : "Posición de juego"));
+        form.add(txtSpecific);
 
         while (true) {
-            int option = JOptionPane.showConfirmDialog(this, form, "Editar datos personales",
+            int option = JOptionPane.showConfirmDialog(this, form, "Editar datos del deportista",
                     JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
             if (option != JOptionPane.OK_OPTION) {
                 return;
             }
             try {
                 int age = DataValidator.parseAge(txtAge.getText());
-                athleteService.updatePersonalData(a.getKey(), txtName.getText(), age, txtPhone.getText());
+                int jersey = DataValidator.parseJerseyNumber(txtJersey.getText());
+                athleteService.updateAthleteData(a.getKey(), txtName.getText(), age,
+                        txtPhone.getText(), jersey, txtSpecific.getText());
                 loadAthleteData();
                 JOptionPane.showMessageDialog(this, "Datos actualizados correctamente.",
                         "Actualizado", JOptionPane.INFORMATION_MESSAGE);
                 return;
             } catch (ValidationException | InvalidAgeException ex) {
+                // Incluye dorsal repetido (DuplicateDataException extiende ValidationException)
                 JOptionPane.showMessageDialog(this, ex.getMessage(),
                         "Datos inválidos", JOptionPane.WARNING_MESSAGE);
             } catch (Exception ex) {

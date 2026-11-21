@@ -6,8 +6,10 @@ import com.creatinaboys.exceptions.ValidationException;
 import com.creatinaboys.model.Athlete;
 import com.creatinaboys.model.AthleteKey;
 import com.creatinaboys.model.Basketballer;
+import com.creatinaboys.model.Footballer;
 import com.creatinaboys.repository.IAthleteRepository;
 import com.creatinaboys.validation.DataValidator;
+import java.util.ArrayList;
 
 import java.util.List;
 
@@ -44,12 +46,14 @@ public class AthleteService implements IAthlteService {
         return repository.save(athlete);
     }
 
-    @Override
-    public boolean updatePersonalData(AthleteKey key, String fullName, int age, String phone)
+       @Override
+    public boolean updateAthleteData(AthleteKey key, String fullName, int age, String phone,
+                                     int jerseyNumber, String specific)
             throws AthleteNotFoundException, InvalidAgeException, ValidationException {
         // Mismas reglas de formato que el registro (RNF8).
         DataValidator.validateFullName(fullName);
         DataValidator.validateRequiredPhone(phone);
+        DataValidator.parseJerseyNumber(String.valueOf(jerseyNumber));
         if (age < DataValidator.MIN_AGE) {
             throw new InvalidAgeException(age);
         }
@@ -59,21 +63,59 @@ public class AthleteService implements IAthlteService {
 
         Athlete target = repository.findByKey(key);
         String newName = fullName.trim();
+        String newPhone = phone.trim();
 
-        // Los datos personales son de la persona: si está en varias disciplinas,
-        // el nombre debe seguir coincidiendo, así que se actualizan todos sus registros.
-        List<Athlete> records = repository.findById(target.getId());
-        if (records.isEmpty()) {
-            records = List.of(target);
+        double newHeight = 0;
+        String newPosition = null;
+        Athlete candidate;
+        if (target instanceof Basketballer) {
+            newHeight = DataValidator.parseHeight(specific);
+            candidate = new Basketballer(target.getId(), newName, age, newPhone, jerseyNumber, newHeight);
+        } else {
+            DataValidator.validateRequiredString(specific, "Posición de juego");
+            newPosition = specific.trim();
+            candidate = new Footballer(target.getId(), newName, age, newPhone, jerseyNumber, newPosition);
         }
+
+        // Unicidad (dorsal por disciplina). Los otros registros de la misma persona se
+        // excluyen porque se renombran junto con este.
+        List<Athlete> others = repository.findAll().stream()
+                .filter(a -> !a.getId().equals(target.getId()))
+                .toList();
+        uniqueness.check(candidate, others, null);
+
+        // Nombre, edad y teléfono son de la persona: se aplican a todas sus disciplinas.
+        // Se trabaja sobre los objetos de esta lista (con una BD cada consulta devuelve
+        // objetos distintos, así que lo que se modifique debe ser lo que se guarda).
+        List<Athlete> records = new ArrayList<>(repository.findById(target.getId()));
+        Athlete mine = null;
+        for (Athlete a : records) {
+            if (a.getKey().equals(key)) {
+                mine = a;
+            }
+        }
+        if (mine == null) {
+            mine = target;
+            records.add(target);
+        }
+
         for (Athlete a : records) {
             a.setFullName(newName);
             a.setAge(age);
-            a.setPhone(phone.trim());
+            a.setPhone(newPhone);
             // La edad define categoría y mensualidad.
             a.setCategory(billingService.determineCategory(age));
             a.setMonthlyFee(billingService.calculateFee(age));
         }
+
+        // Datos propios de este registro.
+        mine.setJerseyNumber(jerseyNumber);
+        if (mine instanceof Basketballer b) {
+            b.setHeight(newHeight);
+        } else if (mine instanceof Footballer f) {
+            f.setPlayingPosition(newPosition);
+        }
+
         boolean ok = true;
         for (Athlete a : records) {
             ok &= repository.update(a);
