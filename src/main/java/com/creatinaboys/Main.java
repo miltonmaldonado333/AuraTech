@@ -1,4 +1,3 @@
-
 package com.creatinaboys;
 
 import com.creatinaboys.repository.PostgresAthleteRepository;
@@ -25,6 +24,8 @@ import com.creatinaboys.service.IHealthService;
 import com.creatinaboys.service.ISaleService;
 import com.creatinaboys.service.PaymentDisciplineMigration;
 import com.creatinaboys.service.SaleService;
+import com.creatinaboys.repository.PostgresCategoryRepository;
+import com.creatinaboys.service.CategoryService;
 
 // Dashboard optimization
 import com.creatinaboys.service.DashboardService;
@@ -57,24 +58,27 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
 
             // Initialize repositories.
-            IAthleteRepository repository =
-                    new PostgresAthleteRepository();
+            IAthleteRepository repository
+                    = new PostgresAthleteRepository();
 
-            IPaymentRepository paymentRepository =
-                    new FilePaymentRepository();
+            IPaymentRepository paymentRepository
+                    = new FilePaymentRepository();
 
-            ICoachRepository coachRepository =
-                    new FileCoachRepository();
+            ICoachRepository coachRepository
+                    = new FileCoachRepository();
 
-            IHealthRepository healthRepository =
-                    new FileHealthRepository();
+            IHealthRepository healthRepository
+                    = new FileHealthRepository();
 
             // Initialize shared services.
-            IBillingService billingService =
-                    new BillingService();
+            CategoryService categoryService
+                    = new CategoryService(new PostgresCategoryRepository());
 
-            IDisciplineService disciplineService =
-                    new DisciplineService();
+            IBillingService billingService
+                    = new BillingService(categoryService);
+
+            IDisciplineService disciplineService
+                    = new DisciplineService();
 
             // Migrate legacy payment disciplines.
             try {
@@ -88,45 +92,45 @@ public class Main {
                 JOptionPane.showMessageDialog(
                         null,
                         "Unable to update payment history:\n"
-                                + exception.getMessage(),
+                        + exception.getMessage(),
                         "AuraTech",
                         JOptionPane.WARNING_MESSAGE
                 );
             }
 
-            AthleteService athleteService =
-                    new AthleteService(
+            AthleteService athleteService
+                    = new AthleteService(
                             repository,
                             billingService
                     );
 
-            ISaleService saleService =
-                    new SaleService(
+            ISaleService saleService
+                    = new SaleService(
                             repository,
                             billingService,
                             paymentRepository
                     );
 
-            ICoachService coachService =
-                    new CoachService(coachRepository);
+            ICoachService coachService
+                    = new CoachService(coachRepository);
 
-            IHealthService healthService =
-                    new HealthService(
+            IHealthService healthService
+                    = new HealthService(
                             healthRepository,
                             repository
                     );
 
             // Initialize the dashboard service.
-            IDashBoardService dashboardService =
-                    new DashboardService(
+            IDashBoardService dashboardService
+                    = new DashboardService(
                             repository,
                             paymentRepository,
                             coachService
                     );
 
             // Initialize authentication.
-            IAuthService authService =
-                    new Authservice(
+            IAuthService authService
+                    = new Authservice(
                             new Fileuserrepository()
                     );
 
@@ -138,7 +142,7 @@ public class Main {
                 JOptionPane.showMessageDialog(
                         null,
                         "Unable to initialize user accounts:\n"
-                                + exception.getMessage(),
+                        + exception.getMessage(),
                         "AuraTech",
                         JOptionPane.ERROR_MESSAGE
                 );
@@ -147,8 +151,8 @@ public class Main {
             }
 
             // Create the main window after authentication.
-            Supplier<PrincipalFrames> frameFactory = () ->
-                    new PrincipalFrames(
+            Supplier<PrincipalFrames> frameFactory = ()
+                    -> new PrincipalFrames(
                             athleteService,
                             saleService,
                             billingService,
@@ -163,8 +167,8 @@ public class Main {
     }
 
     /**
-     * Displays the login window and opens the main window
-     * after successful authentication.
+     * Displays the login window and opens the main window after successful
+     * authentication.
      */
     private static void showLogin(
             IAuthService authService,

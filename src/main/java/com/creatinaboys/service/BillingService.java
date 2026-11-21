@@ -1,9 +1,31 @@
 package com.creatinaboys.service;
 
 import com.creatinaboys.exceptions.InvalidAgeException;
+import com.creatinaboys.exceptions.PersistenceException;
+import com.creatinaboys.model.AgeCategory;
 import com.creatinaboys.model.CategoryEnum;
+import com.creatinaboys.validation.DataValidator;
 
 public class BillingService implements IBillingService {
+
+    private final CategoryService categoryService;
+
+    public BillingService(CategoryService categoryService) {
+        this.categoryService = categoryService;
+    }
+
+    @Override
+    public AgeCategory determineEnrollmentCategory(int age) throws InvalidAgeException {
+        if (age < DataValidator.MIN_AGE || age > DataValidator.MAX_AGE) {
+            throw new InvalidAgeException(age);
+        }
+
+        return categoryService.getCategories().stream()
+                .filter(category -> category.ages().contains(age))
+                .findFirst()
+                .orElseThrow(() -> new PersistenceException(
+                        "No category is configured for age " + age + "."));
+    }
 
     @Override
     public CategoryEnum determineCategory(int age) throws InvalidAgeException {
@@ -24,8 +46,8 @@ public class BillingService implements IBillingService {
 
         return switch (category) {
             case CHILDREN -> 50000.0;
-            case YOUTH    -> 70000.0;
-            case ADULTS   -> 100000.0;
+            case YOUTH -> 70000.0;
+            case ADULTS -> 100000.0;
         };
     }
 }

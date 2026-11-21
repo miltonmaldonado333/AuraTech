@@ -1,6 +1,7 @@
 package com.creatinaboys.service;
 
 import com.creatinaboys.exceptions.InvalidAgeException;
+import com.creatinaboys.model.AgeCategory;
 import com.creatinaboys.model.CategoryEnum;
 
 public interface IBillingService {
@@ -8,4 +9,6 @@ public interface IBillingService {
     double calculateFee(int age) throws InvalidAgeException;
 
     CategoryEnum determineCategory(int age) throws InvalidAgeException;
+
+    AgeCategory determineEnrollmentCategory(int age) throws InvalidAgeException;
 }
