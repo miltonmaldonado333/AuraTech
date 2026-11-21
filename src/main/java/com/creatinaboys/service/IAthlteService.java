@@ -13,6 +13,28 @@ public interface IAthlteService {
 
     boolean registerAthlete(Athlete athlete) throws InvalidAgeException, ValidationException;
 
+    /**
+     * Registra eligiendo la categoría cuando la edad cae en varias.
+     * @param categoryName nombre elegido; puede ser null si la edad solo tiene una categoría
+     */
+    default boolean registerAthlete(Athlete athlete, String categoryName)
+            throws InvalidAgeException, ValidationException {
+        return registerAthlete(athlete);
+    }
+
+    /** Categorías disponibles para esa edad (más de una = hay que preguntar). */
+    default List<com.creatinaboys.model.AgeCategory> categoryOptionsForAge(int age)
+            throws InvalidAgeException {
+        throw new UnsupportedOperationException("categoryOptionsForAge no implementado");
+    }
+
+    /** Igual que updateAthleteData, pero con la categoría elegida si la nueva edad cae en varias. */
+    default boolean updateAthleteData(AthleteKey key, String fullName, int age, String phone,
+                                      int jerseyNumber, String specific, String categoryName)
+            throws AthleteNotFoundException, InvalidAgeException, ValidationException {
+        return updateAthleteData(key, fullName, age, phone, jerseyNumber, specific);
+    }
+
     Athlete findAthlete(AthleteKey key) throws AthleteNotFoundException;
     List<Athlete> findAthletesById(String id);
     List<Athlete> getAllAthletes();

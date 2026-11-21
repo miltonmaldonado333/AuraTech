@@ -168,6 +168,19 @@ public class SaleService implements ISaleService {
         return categoryRevenueMap;
     }
 
+    @Override
+    public Map<String, Double> getRevenueByCategoryName() {
+        return athleteRepository.findAll().stream()
+                .filter(Objects::nonNull)
+                .filter(athlete -> athlete.getCategoryName() != null
+                        && !athlete.getCategoryName().isBlank())
+                .collect(Collectors.groupingBy(
+                        Athlete::getCategoryName,
+                        java.util.LinkedHashMap::new,
+                        Collectors.summingDouble(Athlete::getMonthlyFee)
+                ));
+    }
+
     /**
      * Un registro está pendiente si lo pagado en el mes actual es menor que su
      * mensualidad.

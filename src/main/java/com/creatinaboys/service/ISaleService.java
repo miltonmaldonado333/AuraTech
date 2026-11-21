@@ -23,6 +23,9 @@ public interface ISaleService {
 
     Map<CategoryEnum, Double> getRevenueByCategory();
 
+    /** Ingreso proyectado por nombre de categoría del catálogo (incluye las creadas por el club). */
+    Map<String, Double> getRevenueByCategoryName();
+
     List<Athlete> getAthletesWithPendingPayment();
 
     /** Total pagado en el mes actual por cada registro (documento + disciplina). */
