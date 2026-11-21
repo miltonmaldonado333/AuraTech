@@ -45,6 +45,43 @@ public class AthleteService implements IAthlteService {
     }
 
     @Override
+    public boolean updatePersonalData(AthleteKey key, String fullName, int age, String phone)
+            throws AthleteNotFoundException, InvalidAgeException, ValidationException {
+        // Mismas reglas de formato que el registro (RNF8).
+        DataValidator.validateFullName(fullName);
+        DataValidator.validateRequiredPhone(phone);
+        if (age < DataValidator.MIN_AGE) {
+            throw new InvalidAgeException(age);
+        }
+        if (age > DataValidator.MAX_AGE) {
+            throw new ValidationException("La edad no puede ser mayor a " + DataValidator.MAX_AGE + " años.");
+        }
+
+        Athlete target = repository.findByKey(key);
+        String newName = fullName.trim();
+
+        // Los datos personales son de la persona: si está en varias disciplinas,
+        // el nombre debe seguir coincidiendo, así que se actualizan todos sus registros.
+        List<Athlete> records = repository.findById(target.getId());
+        if (records.isEmpty()) {
+            records = List.of(target);
+        }
+        for (Athlete a : records) {
+            a.setFullName(newName);
+            a.setAge(age);
+            a.setPhone(phone.trim());
+            // La edad define categoría y mensualidad.
+            a.setCategory(billingService.determineCategory(age));
+            a.setMonthlyFee(billingService.calculateFee(age));
+        }
+        boolean ok = true;
+        for (Athlete a : records) {
+            ok &= repository.update(a);
+        }
+        return ok;
+    }
+
+    @Override
     public Athlete findAthlete(AthleteKey key) throws AthleteNotFoundException {
         return repository.findByKey(key);
     }

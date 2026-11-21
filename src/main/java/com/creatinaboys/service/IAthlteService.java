@@ -19,6 +19,10 @@ public interface IAthlteService {
     int getTotalAthletesCount();
     <T extends Athlete> long getAthletesCountByType(Class<T> type);
 
+    /** RF1: edita nombre, edad y teléfono de una persona (se aplica a todas sus disciplinas). */
+    boolean updatePersonalData(AthleteKey key, String fullName, int age, String phone)
+            throws AthleteNotFoundException, InvalidAgeException, ValidationException;
+
     boolean deleteAthlete(AthleteKey key);
     boolean toggleAthleteStatus(AthleteKey key);
     boolean setAthleteActive(AthleteKey key, boolean active);
