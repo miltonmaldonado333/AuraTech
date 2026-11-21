@@ -332,8 +332,8 @@ public class PostgresAthleteRepository
             ps.setDouble(altura, b.getHeight());
 
         } else {
-            throw new IllegalArgumentException(
-                    "Tipo de deportista no soportado");
+            ps.setNull(posicion, Types.VARCHAR);
+            ps.setNull(altura, Types.NUMERIC);
         }
     }
 
@@ -360,8 +360,7 @@ public class PostgresAthleteRepository
                     rs.getDouble("height"));
 
         } else {
-            throw new PersistenceException(
-                    "Disciplina desconocida: " + disciplina);
+            atleta = new GeneralAthlete(id, nombre, edad, telefono, dorsal, disciplina);
         }
 
         atleta.setMonthlyFee(

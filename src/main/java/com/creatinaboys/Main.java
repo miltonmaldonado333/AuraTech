@@ -10,6 +10,7 @@ import com.creatinaboys.repository.IHealthRepository;
 import com.creatinaboys.repository.IPaymentRepository;
 import com.creatinaboys.repository.PostgresAthleteRepository;
 import com.creatinaboys.repository.PostgresCategoryRepository;
+import com.creatinaboys.repository.PostgresDisciplineRepository;
 
 import com.creatinaboys.service.AthleteService;
 import com.creatinaboys.service.Authservice;
@@ -54,7 +55,6 @@ public class Main {
         } catch (Exception ignored) {
         }
 
-        // Start the application on the Event Dispatch Thread.
         SwingUtilities.invokeLater(() -> {
 
             // Initialize repositories.
@@ -78,7 +78,7 @@ public class Main {
                     new BillingService(categoryService);
 
             IDisciplineService disciplineService =
-                    new DisciplineService();
+                    new DisciplineService(new PostgresDisciplineRepository());
 
             // Migrate legacy payment disciplines.
             try {
@@ -96,10 +96,7 @@ public class Main {
             }
 
             AthleteService athleteService =
-                    new AthleteService(
-                            repository,
-                            billingService
-                    );
+                    new AthleteService(repository, billingService);
 
             ISaleService saleService =
                     new SaleService(
@@ -112,12 +109,8 @@ public class Main {
                     new CoachService(coachRepository);
 
             IHealthService healthService =
-                    new HealthService(
-                            healthRepository,
-                            repository
-                    );
+                    new HealthService(healthRepository, repository);
 
-            // Initialize the dashboard service.
             IDashBoardService dashboardService =
                     new DashboardService(
                             repository,
@@ -126,7 +119,6 @@ public class Main {
                             categoryService
                     );
 
-            // Initialize authentication.
             IAuthService authService =
                     new Authservice(new Fileuserrepository());
 
@@ -142,7 +134,6 @@ public class Main {
                 return;
             }
 
-            // Create the main window after authentication.
             Supplier<PrincipalFrames> frameFactory = () ->
                     new PrincipalFrames(
                             athleteService,
@@ -158,10 +149,6 @@ public class Main {
         });
     }
 
-    /**
-     * Displays the login window and opens the main window after successful
-     * authentication.
-     */
     private static void showLogin(
             IAuthService authService,
             Supplier<PrincipalFrames> frameFactory) {

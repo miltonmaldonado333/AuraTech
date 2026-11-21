@@ -2,8 +2,8 @@ package com.creatinaboys.ui.panels;
 
 import com.creatinaboys.exceptions.PersistenceException;
 import com.creatinaboys.model.Athlete;
-import com.creatinaboys.model.CategoryEnum;
 import com.creatinaboys.service.AthleteService;
+import com.creatinaboys.service.CategoryService;
 import com.creatinaboys.service.IDisciplineService;
 import com.creatinaboys.ui.components.CardPanel;
 import com.creatinaboys.ui.components.IconBadge;
@@ -15,29 +15,29 @@ import com.creatinaboys.ui.components.SpanishLabels;
 import com.creatinaboys.ui.components.VectorIcon.Type;
 import com.creatinaboys.ui.theme.ThemeConstants;
 
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import java.awt.*;
-import java.util.List;
 
-/**
- * Pantalla de Disciplinas: catálogo del club con deportistas por disciplina y su
- * reparto por categoría, más un formulario para agregar disciplinas nuevas.
- */
 public class DisciplinePanel extends JPanel {
 
     private static final Color[] ACCENTS = {
-            ThemeConstants.PRIMARY_BLUE,
-            new Color(249, 115, 22),
-            new Color(16, 185, 129),
-            ThemeConstants.PRIMARY_INDIGO,
-            new Color(236, 72, 153)
+        ThemeConstants.PRIMARY_BLUE,
+        new Color(249, 115, 22),
+        new Color(16, 185, 129),
+        ThemeConstants.PRIMARY_INDIGO,
+        new Color(236, 72, 153)
     };
+
     private static final Color OK_GREEN = new Color(22, 163, 74);
 
     private final AthleteService athleteService;
     private final IDisciplineService disciplineService;
-    private final com.creatinaboys.service.CategoryService categoryService;
+    private final CategoryService categoryService;
 
     private final JPanel grid = new JPanel(new GridLayout(0, 2, 18, 18));
     private final JLabel lblSummary = new JLabel();
@@ -49,7 +49,7 @@ public class DisciplinePanel extends JPanel {
     }
 
     public DisciplinePanel(AthleteService athleteService, IDisciplineService disciplineService,
-                           com.creatinaboys.service.CategoryService categoryService) {
+                           CategoryService categoryService) {
         this.athleteService = athleteService;
         this.disciplineService = disciplineService;
         this.categoryService = categoryService;
@@ -81,15 +81,11 @@ public class DisciplinePanel extends JPanel {
         header.setOpaque(false);
         header.setBorder(new EmptyBorder(0, 8, 14, 0));
 
-        JLabel title = new JLabel("Disciplinas");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 26));
-        title.setForeground(ThemeConstants.TEXT_MAIN);
-        title.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel subtitle = new JLabel("Oferta deportiva del club y distribución de los deportistas por disciplina.");
-        subtitle.setFont(ThemeConstants.FONT_REGULAR);
-        subtitle.setForeground(ThemeConstants.TEXT_MUTED);
-        subtitle.setAlignmentX(LEFT_ALIGNMENT);
+        JLabel title = label("Disciplinas",
+                new Font("Segoe UI", Font.BOLD, 26), ThemeConstants.TEXT_MAIN);
+        JLabel subtitle = label(
+                "Oferta deportiva del club y distribución de los deportistas por disciplina.",
+                ThemeConstants.FONT_REGULAR, ThemeConstants.TEXT_MUTED);
 
         lblSummary.setFont(ThemeConstants.FONT_SMALL);
         lblSummary.setForeground(ThemeConstants.TEXT_MUTED);
@@ -99,9 +95,10 @@ public class DisciplinePanel extends JPanel {
         InputBox nameBox = new InputBox(Type.BALL, txtName);
         nameBox.setPreferredSize(new Dimension(400, 52));
 
-        ModernButton btnAdd = new ModernButton("Agregar", Type.CHECK, ModernButton.Style.PRIMARY, 140);
-        btnAdd.addActionListener(e -> addDiscipline());
-        txtName.addActionListener(e -> addDiscipline());
+        ModernButton btnAdd = new ModernButton(
+                "Agregar", Type.CHECK, ModernButton.Style.PRIMARY, 140);
+        btnAdd.addActionListener(event -> addDiscipline());
+        txtName.addActionListener(event -> addDiscipline());
 
         JPanel addRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         addRow.setOpaque(false);
@@ -127,6 +124,7 @@ public class DisciplinePanel extends JPanel {
 
     private void addDiscipline() {
         String name = txtName.getText().trim();
+
         try {
             if (name.isEmpty()) {
                 feedback("Escribe el nombre de la disciplina.", false);
@@ -142,49 +140,56 @@ public class DisciplinePanel extends JPanel {
         }
     }
 
-    private void feedback(String text, boolean ok) {
-        lblFeedback.setForeground(ok ? OK_GREEN : ThemeConstants.DANGER_RED);
+    private void feedback(String text, boolean success) {
+        lblFeedback.setForeground(success ? OK_GREEN : ThemeConstants.DANGER_RED);
         lblFeedback.setText(text);
     }
 
-    /** Vuelve a leer los datos. Se llama cada vez que se muestra la pantalla. */
     public void refresh() {
         grid.removeAll();
 
         List<String> disciplines;
         try {
             disciplines = disciplineService.getAvailableDisciplines();
-        } catch (PersistenceException e) {
+        } catch (PersistenceException ex) {
             disciplines = List.of();
-            feedback("No se pudo leer el catálogo: " + e.getMessage(), false);
+            feedback("No se pudo leer el catálogo: " + ex.getMessage(), false);
         }
+
         List<Athlete> athletes = athleteService.getAllAthletes();
-        List<String> categoryNames = new java.util.ArrayList<>();
+        List<String> categoryNames = new ArrayList<>();
+
         if (categoryService != null) {
             try {
-                categoryService.getCategories().forEach(c -> categoryNames.add(c.name()));
-            } catch (RuntimeException e) {
-                // Sin catálogo se muestran solo las categorías que ya tienen deportistas.
+                categoryService.getCategories().forEach(category -> categoryNames.add(category.name()));
+            } catch (RuntimeException ex) {
+                // Fall back to the categories already assigned to athletes.
             }
         }
+
         lblSummary.setText(disciplines.size() + " disciplinas · " + athletes.size() + " deportistas");
 
-        for (int i = 0; i < disciplines.size(); i++) {
-            grid.add(buildCard(disciplines.get(i), athletes, categoryNames, ACCENTS[i % ACCENTS.length]));
+        for (int index = 0; index < disciplines.size(); index++) {
+            grid.add(buildCard(disciplines.get(index), athletes, categoryNames,
+                    ACCENTS[index % ACCENTS.length]));
         }
+
         if (disciplines.size() % 2 == 1) {
             JPanel filler = new JPanel();
             filler.setOpaque(false);
             grid.add(filler);
         }
+
         grid.revalidate();
         grid.repaint();
     }
 
-    private JComponent buildCard(String discipline, List<Athlete> all, List<String> categoryNames, Color accent) {
-        List<Athlete> members = all.stream()
-                .filter(a -> discipline.equalsIgnoreCase(a.getDiscipline()))
+    private JComponent buildCard(String discipline, List<Athlete> athletes,
+                                 List<String> categoryNames, Color accent) {
+        List<Athlete> members = athletes.stream()
+                .filter(athlete -> discipline.equalsIgnoreCase(athlete.getDiscipline()))
                 .toList();
+
         long active = members.stream().filter(Athlete::isActive).count();
 
         CardPanel card = new CardPanel(new BorderLayout(), 18);
@@ -201,9 +206,12 @@ public class DisciplinePanel extends JPanel {
         names.setLayout(new BoxLayout(names, BoxLayout.Y_AXIS));
         names.setOpaque(false);
         names.add(Box.createVerticalGlue());
-        names.add(label(SpanishLabels.of(discipline), new Font("Segoe UI", Font.BOLD, 20), ThemeConstants.TEXT_MAIN));
-        names.add(label(members.size() + (members.size() == 1 ? " deportista" : " deportistas")
-                + " · " + active + (active == 1 ? " activo" : " activos"), ThemeConstants.FONT_REGULAR, ThemeConstants.TEXT_MUTED));
+        names.add(label(SpanishLabels.discipline(discipline),
+                new Font("Segoe UI", Font.BOLD, 20), ThemeConstants.TEXT_MAIN));
+        names.add(label(
+                members.size() + (members.size() == 1 ? " deportista" : " deportistas")
+                + " · " + active + (active == 1 ? " activo" : " activos"),
+                ThemeConstants.FONT_REGULAR, ThemeConstants.TEXT_MUTED));
         names.add(Box.createVerticalGlue());
         top.add(names, BorderLayout.CENTER);
 
@@ -212,18 +220,26 @@ public class DisciplinePanel extends JPanel {
         content.add(label("POR CATEGORÍA", ThemeConstants.FONT_SECTION, ThemeConstants.PLACEHOLDER));
         content.add(Box.createVerticalStrut(10));
 
-        // Categorías del catálogo + las antiguas que aún tengan deportistas, agrupadas por nombre.
-        java.util.Map<String, Long> byCategory = new java.util.LinkedHashMap<>();
+        Map<String, Long> byCategory = new LinkedHashMap<>();
+
         for (String name : categoryNames) {
-            byCategory.putIfAbsent(SpanishLabels.of(name), 0L);
+            byCategory.putIfAbsent(name, 0L);
         }
-        for (Athlete a : members) {
-            if (a.getCategoryName() != null && !a.getCategoryName().isBlank()) {
-                byCategory.merge(SpanishLabels.of(a.getCategoryName()), 1L, Long::sum);
+
+        for (Athlete athlete : members) {
+            String categoryName = athlete.getCategoryName();
+            if (categoryName != null && !categoryName.isBlank()) {
+                byCategory.merge(categoryName, 1L, Long::sum);
             }
         }
-        for (java.util.Map.Entry<String, Long> e : byCategory.entrySet()) {
-            content.add(categoryRow(e.getKey(), e.getValue(), members.size(), accent));
+
+        for (Map.Entry<String, Long> entry : byCategory.entrySet()) {
+            content.add(categoryRow(
+                    SpanishLabels.of(entry.getKey()),
+                    entry.getValue(),
+                    members.size(),
+                    accent
+            ));
             content.add(Box.createVerticalStrut(10));
         }
 
@@ -238,14 +254,13 @@ public class DisciplinePanel extends JPanel {
 
         JPanel text = new JPanel(new BorderLayout());
         text.setOpaque(false);
-        JLabel k = new JLabel(name);
-        k.setFont(ThemeConstants.FONT_REGULAR);
-        k.setForeground(ThemeConstants.TEXT_MUTED);
-        JLabel v = new JLabel(String.valueOf(count));
-        v.setFont(ThemeConstants.FONT_BOLD);
-        v.setForeground(ThemeConstants.TEXT_MAIN);
-        text.add(k, BorderLayout.WEST);
-        text.add(v, BorderLayout.EAST);
+
+        JLabel nameLabel = label(name, ThemeConstants.FONT_REGULAR, ThemeConstants.TEXT_MUTED);
+        JLabel countLabel = label(
+                String.valueOf(count), ThemeConstants.FONT_BOLD, ThemeConstants.TEXT_MAIN);
+
+        text.add(nameLabel, BorderLayout.WEST);
+        text.add(countLabel, BorderLayout.EAST);
 
         ShareBar bar = new ShareBar(accent);
         bar.setValue(total == 0 ? 0 : (double) count / total);
@@ -257,10 +272,10 @@ public class DisciplinePanel extends JPanel {
     }
 
     private static JLabel label(String text, Font font, Color color) {
-        JLabel l = new JLabel(text);
-        l.setFont(font);
-        l.setForeground(color);
-        l.setAlignmentX(LEFT_ALIGNMENT);
-        return l;
+        JLabel label = new JLabel(text);
+        label.setFont(font);
+        label.setForeground(color);
+        label.setAlignmentX(LEFT_ALIGNMENT);
+        return label;
     }
 }

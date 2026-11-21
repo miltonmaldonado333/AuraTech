@@ -20,6 +20,7 @@ import com.creatinaboys.ui.theme.ThemeConstants;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import static java.awt.Component.LEFT_ALIGNMENT;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.util.List;
@@ -98,12 +99,10 @@ public class CategoryPanel extends JPanel {
         header.add(lblSummary);
 
         addButton.addActionListener(event -> showCategoryForm(null));
-
         JPanel actions = new JPanel(new BorderLayout(14, 0));
         actions.setOpaque(false);
         actions.add(header, BorderLayout.CENTER);
         actions.add(addButton, BorderLayout.EAST);
-
         return actions;
     }
 
@@ -111,22 +110,18 @@ public class CategoryPanel extends JPanel {
         if (busy) {
             return;
         }
-
         setBusy(true, "Loading categories...");
-
         new SwingWorker<CategoryView, Void>() {
             @Override
             protected CategoryView doInBackground() {
                 List<AgeCategory> categories = categoryService.getCategories();
                 List<Athlete> athletes = athleteService.getAllAthletes();
-
                 List<String> disciplines;
                 try {
                     disciplines = disciplineService.getAvailableDisciplines();
                 } catch (PersistenceException e) {
                     disciplines = List.of();
                 }
-
                 return new CategoryView(categories, athletes, disciplines);
             }
 
@@ -149,17 +144,14 @@ public class CategoryPanel extends JPanel {
 
     private void renderCategories(CategoryView view) {
         cardsRow.removeAll();
-
         int total = view.athletes().size();
         long active = view.athletes().stream().filter(Athlete::isActive).count();
-
         lblSummary.setText(view.categories().size() + " categorías · "
                 + total + " deportistas · " + active + " activos");
 
         for (AgeCategory category : view.categories()) {
             cardsRow.add(buildCategoryCard(category, view.athletes(), view.disciplines(), total));
         }
-
         cardsRow.revalidate();
         cardsRow.repaint();
     }
@@ -175,7 +167,6 @@ public class CategoryPanel extends JPanel {
         JSpinner minAge = ageSpinner(previous == null ? DataValidator.MIN_AGE : previous.minAge());
         JSpinner maxAge = ageSpinner(previous == null ? DataValidator.MIN_AGE : previous.maxAge());
         JTextField fee = new JTextField(previous == null ? "" : previous.monthlyFee().toString(), 12);
-
         JPanel fields = new JPanel(new GridLayout(0, 2, 8, 8));
         fields.add(new JLabel("Category name"));
         fields.add(name);
@@ -185,7 +176,6 @@ public class CategoryPanel extends JPanel {
         fields.add(maxAge);
         fields.add(new JLabel("Monthly fee (COP)"));
         fields.add(fee);
-
         JPanel form = new JPanel(new BorderLayout(0, 12));
         form.add(fields, BorderLayout.CENTER);
         form.add(new JLabel("<html>The selected ages will use this category for new enrollments.<br>"
@@ -196,38 +186,26 @@ public class CategoryPanel extends JPanel {
             try {
                 minAge.commitEdit();
                 maxAge.commitEdit();
-
                 BigDecimal monthlyFee = new BigDecimal(fee.getText().strip().replace(',', '.'));
-
-                saveCategory(new CategoryInput(
-                        name.getText(),
-                        (int) minAge.getValue(),
-                        (int) maxAge.getValue(),
-                        monthlyFee
-                ));
-
+                saveCategory(new CategoryInput(name.getText(), (int) minAge.getValue(), (int) maxAge.getValue(), monthlyFee));
                 return;
             } catch (NumberFormatException | ParseException e) {
-                JOptionPane.showMessageDialog(this,
-                        "Enter whole ages and a fee such as 85000 or 85000,50.",
+                JOptionPane.showMessageDialog(this, "Enter whole ages and a fee such as 85000 or 85000,50.",
                         "Invalid category", JOptionPane.WARNING_MESSAGE);
             }
         }
     }
 
     private JSpinner ageSpinner(int age) {
-        return new JSpinner(new SpinnerNumberModel(
-                age, DataValidator.MIN_AGE, DataValidator.MAX_AGE, 1));
+        return new JSpinner(new SpinnerNumberModel(age, DataValidator.MIN_AGE, DataValidator.MAX_AGE, 1));
     }
 
     private void saveCategory(CategoryInput input) {
         setBusy(true, "Saving category...");
-
         new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() throws Exception {
-                categoryService.createCategory(
-                        input.name(), input.minAge(), input.maxAge(), input.monthlyFee());
+                categoryService.createCategory(input.name(), input.minAge(), input.maxAge(), input.monthlyFee());
                 return null;
             }
 
@@ -235,29 +213,23 @@ public class CategoryPanel extends JPanel {
             protected void done() {
                 try {
                     get();
-                    JOptionPane.showMessageDialog(CategoryPanel.this,
-                            "Category created successfully.",
+                    JOptionPane.showMessageDialog(CategoryPanel.this, "Category created successfully.",
                             "New category", JOptionPane.INFORMATION_MESSAGE);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 } catch (ExecutionException e) {
                     Throwable cause = e.getCause();
-
                     JOptionPane.showMessageDialog(CategoryPanel.this, cause.getMessage(),
                             "Unable to save category", JOptionPane.WARNING_MESSAGE);
-
                     if (cause instanceof ValidationException && isShowing()) {
                         setBusy(false, "Check the category details.");
                         showCategoryForm(input);
-
                         if (!busy) {
                             refresh();
                         }
-
                         return;
                     }
                 }
-
                 busy = false;
                 refresh();
             }
@@ -267,24 +239,16 @@ public class CategoryPanel extends JPanel {
     private JComponent buildCategoryCard(AgeCategory category, List<Athlete> all,
                                          List<String> disciplines, int total) {
         Color accent = ThemeConstants.PRIMARY_BLUE;
-
-        List<Athlete> members = all.stream()
-                .filter(athlete -> category.name().equals(athlete.getCategoryName()))
-                .toList();
-
+        List<Athlete> members = all.stream().filter(a -> category.name().equals(a.getCategoryName())).toList();
         long active = members.stream().filter(Athlete::isActive).count();
-
-        double income = members.stream()
-                .filter(Athlete::isActive)
-                .mapToDouble(Athlete::getMonthlyFee)
-                .sum();
+        double income = members.stream().filter(Athlete::isActive).mapToDouble(Athlete::getMonthlyFee).sum();
 
         CardPanel card = new CardPanel(new BorderLayout(), 18);
-
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setOpaque(false);
 
+        // Cabecera: ícono + nombre + rango
         JPanel top = new JPanel(new BorderLayout(12, 0));
         top.setOpaque(false);
         top.setAlignmentX(LEFT_ALIGNMENT);
@@ -293,36 +257,28 @@ public class CategoryPanel extends JPanel {
         JPanel names = new JPanel();
         names.setLayout(new BoxLayout(names, BoxLayout.Y_AXIS));
         names.setOpaque(false);
-
-        JLabel name = label(categoryLabel(category.name()),
-                new Font("Segoe UI", Font.BOLD, 20), ThemeConstants.TEXT_MAIN);
-
-        JLabel ages = label(rangeText(category.ages()),
-                ThemeConstants.FONT_REGULAR, ThemeConstants.TEXT_MUTED);
-
+        JLabel name = label(categoryLabel(category.name()), new Font("Segoe UI", Font.BOLD, 20), ThemeConstants.TEXT_MAIN);
+        JLabel ages = label(rangeText(category.ages()), ThemeConstants.FONT_REGULAR, ThemeConstants.TEXT_MUTED);
         names.add(Box.createVerticalGlue());
         names.add(name);
         ages.setToolTipText(ages.getText());
         names.add(ages);
         names.add(Box.createVerticalGlue());
-
         top.add(names, BorderLayout.CENTER);
         content.add(top);
         content.add(Box.createVerticalStrut(18));
 
-        JLabel fee = label(Money.cop(category.monthlyFee().doubleValue()),
-                new Font("Segoe UI", Font.BOLD, 30), accent);
+        // Tarifa
+        JLabel fee = label(Money.cop(category.monthlyFee().doubleValue()), new Font("Segoe UI", Font.BOLD, 30), accent);
         fee.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel feeCaption = label("tarifa mensual",
-                ThemeConstants.FONT_SMALL, ThemeConstants.TEXT_MUTED);
-
+        JLabel feeCaption = label("tarifa mensual", ThemeConstants.FONT_SMALL, ThemeConstants.TEXT_MUTED);
         content.add(fee);
         content.add(feeCaption);
         content.add(Box.createVerticalStrut(16));
         content.add(separator());
         content.add(Box.createVerticalStrut(14));
 
+        // Métricas
         content.add(metricRow("Deportistas", String.valueOf(members.size())));
         content.add(Box.createVerticalStrut(8));
         content.add(metricRow("Activos", String.valueOf(active)));
@@ -330,35 +286,29 @@ public class CategoryPanel extends JPanel {
         content.add(metricRow("Ingreso mensual estimado", Money.cop(income)));
         content.add(Box.createVerticalStrut(14));
 
+        // Peso dentro del club
         ShareBar share = new ShareBar(accent);
         share.setAlignmentX(LEFT_ALIGNMENT);
         share.setValue(total == 0 ? 0 : (double) members.size() / total);
         content.add(share);
-
         int pct = total == 0 ? 0 : (int) Math.round(100.0 * members.size() / total);
-        JLabel shareText = label(pct + "% del club",
-                ThemeConstants.FONT_SMALL, ThemeConstants.TEXT_MUTED);
+        JLabel shareText = label(pct + "% del club", ThemeConstants.FONT_SMALL, ThemeConstants.TEXT_MUTED);
         shareText.setBorder(new EmptyBorder(4, 0, 0, 0));
-
         content.add(shareText);
         content.add(Box.createVerticalStrut(16));
         content.add(separator());
         content.add(Box.createVerticalStrut(12));
 
+        // Por disciplina
         content.add(label("POR DISCIPLINA", ThemeConstants.FONT_SECTION, ThemeConstants.PLACEHOLDER));
         content.add(Box.createVerticalStrut(8));
-
         for (String discipline : disciplines) {
-            long count = members.stream()
-                    .filter(athlete -> discipline.equalsIgnoreCase(athlete.getDiscipline()))
-                    .count();
-
-            content.add(metricRow(SpanishLabels.of(discipline), String.valueOf(count)));
+            long n = members.stream().filter(a -> discipline.equalsIgnoreCase(a.getDiscipline())).count();
+            content.add(metricRow(SpanishLabels.discipline(discipline), String.valueOf(n)));
             content.add(Box.createVerticalStrut(6));
         }
 
         card.add(content, BorderLayout.NORTH);
-
         return card;
     }
 
@@ -373,11 +323,9 @@ public class CategoryPanel extends JPanel {
         if (ages.isEmpty()) {
             return "Sin edades para nuevas afiliaciones";
         }
-
         StringJoiner ranges = new StringJoiner(", ");
         int start = ages.get(0);
         int end = start;
-
         for (int age : ages.subList(1, ages.size())) {
             if (age != end + 1) {
                 ranges.add(start == end ? Integer.toString(start) : start + "–" + end);
@@ -385,44 +333,39 @@ public class CategoryPanel extends JPanel {
             }
             end = age;
         }
-
         ranges.add(start == end ? Integer.toString(start) : start + "–" + end);
         return ranges + " años";
     }
 
     private static JLabel label(String text, Font font, Color color) {
-        JLabel label = new JLabel(text);
-        label.setFont(font);
-        label.setForeground(color);
-        label.setAlignmentX(LEFT_ALIGNMENT);
-        return label;
+        JLabel l = new JLabel(text);
+        l.setFont(font);
+        l.setForeground(color);
+        l.setAlignmentX(LEFT_ALIGNMENT);
+        return l;
     }
 
     private static JComponent metricRow(String key, String value) {
         JPanel row = new JPanel(new BorderLayout());
         row.setOpaque(false);
         row.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel keyLabel = new JLabel(key);
-        keyLabel.setFont(ThemeConstants.FONT_REGULAR);
-        keyLabel.setForeground(ThemeConstants.TEXT_MUTED);
-
-        JLabel valueLabel = new JLabel(value);
-        valueLabel.setFont(ThemeConstants.FONT_BOLD);
-        valueLabel.setForeground(ThemeConstants.TEXT_MAIN);
-
-        row.add(keyLabel, BorderLayout.WEST);
-        row.add(valueLabel, BorderLayout.EAST);
+        JLabel k = new JLabel(key);
+        k.setFont(ThemeConstants.FONT_REGULAR);
+        k.setForeground(ThemeConstants.TEXT_MUTED);
+        JLabel v = new JLabel(value);
+        v.setFont(ThemeConstants.FONT_BOLD);
+        v.setForeground(ThemeConstants.TEXT_MAIN);
+        row.add(k, BorderLayout.WEST);
+        row.add(v, BorderLayout.EAST);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
-
         return row;
     }
 
     private static JComponent separator() {
-        JSeparator separator = new JSeparator();
-        separator.setForeground(ThemeConstants.BORDER_COLOR);
-        separator.setAlignmentX(LEFT_ALIGNMENT);
-        separator.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        return separator;
+        JSeparator s = new JSeparator();
+        s.setForeground(ThemeConstants.BORDER_COLOR);
+        s.setAlignmentX(LEFT_ALIGNMENT);
+        s.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        return s;
     }
 }

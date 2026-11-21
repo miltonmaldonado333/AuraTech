@@ -1,13 +1,28 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.creatinaboys.model;
 
-/**
- *
- * @author milton maldonado
- */
-public class GeneralAthlete {
-    
+import com.creatinaboys.exceptions.InvalidAgeException;
+import com.creatinaboys.service.IBillingService;
+
+/** An athlete in a discipline that uses only the shared enrollment fields. */
+public class GeneralAthlete extends Athlete {
+
+    private final String discipline;
+
+    public GeneralAthlete(String id, String fullName, int age, String phone,
+                          int jerseyNumber, String discipline) {
+        super(id, fullName, age, phone, jerseyNumber);
+        this.discipline = requireText(discipline, "discipline");
+    }
+
+    @Override
+    public String getDiscipline() {
+        return discipline;
+    }
+
+    @Override
+    public void calculateFee(IBillingService billingService) throws InvalidAgeException {
+        AgeCategory category = billingService.determineEnrollmentCategory(getAge());
+        setCategoryName(category.name());
+        setMonthlyFee(category.monthlyFee().doubleValue());
+    }
 }
