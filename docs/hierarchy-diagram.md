@@ -6,11 +6,21 @@ Inheritance (`extends`) and interface realization (`implements`) of **every** cl
 
 ## 1. Domain model, exceptions and validation
 
-Only `Athlete` has subclasses. Enums, `Coach`, `HealthRecord`, `InjuryRecord`, `Payment`, `UserAccount` and `DataValidator` do not extend any project class. Exceptions extend `java.lang.Exception` (checked) or `RuntimeException` (unchecked).
+Only `Athlete` has domain-model subclasses. Enums, `Coach`, `HealthRecord`, `InjuryRecord`, `Payment`, `UserAccount` and `DataValidator` do not extend any project class. Exceptions extend `java.lang.Exception` (checked) or `RuntimeException` (unchecked).
 
 ```mermaid
 classDiagram
     direction TB
+    class DuplicateDataException
+    class AgeCategory {
+        <<record>>
+    }
+    class AthleteKey {
+        <<record>>
+    }
+    class GeneralAthlete {
+        -String discipline
+    }
     class AthleteNotFoundException
     class CoachNotFoundException
     class InvalidAgeException
@@ -59,6 +69,8 @@ classDiagram
         <<future extension>>
     }
     Athlete <|-- Volleyballer
+    ValidationException <|-- DuplicateDataException
+    Athlete <|-- GeneralAthlete
 ```
 
 ## 2. Persistence (repositories and parsers)
@@ -86,6 +98,12 @@ classDiagram
     class Fileuserrepository
     class FootballerParser
     class HealthRecordParser
+    class ICategoryRepository {
+        <<interface>>
+    }
+    class PostgresAthleteRepository
+    class PostgresCategoryRepository
+    class PostgresDisciplineRepository
     class IAthleteRepository {
         <<interface>>
     }
@@ -122,15 +140,31 @@ classDiagram
         <<future extension>>
     }
     AthleteParser <|.. VolleyballerParser
+    IAthleteRepository <|.. PostgresAthleteRepository
+    ICategoryRepository <|.. PostgresCategoryRepository
+    IDisciplineRepository <|.. PostgresDisciplineRepository
 ```
 
 ## 3. Services
 
-Each service implements its interface (DIP). `AthleteService` has no interface; `MembershipExpirationPolicy` is the only implementation of `IActivationPolicy`.
+Services implement their declared interfaces (DIP). `AthleteService` implements the source-named `IAthlteService`; `MembershipExpirationPolicy` is the only implementation of `IActivationPolicy`.
 
 ```mermaid
 classDiagram
     direction TB
+    class AthleteUniquenessPolicy
+    class CategoryService
+    class DashboardSnapshot {
+        <<record>>
+    }
+    class DashboardService
+    class PaymentDisciplineMigration
+    class IAthlteService {
+        <<interface>>
+    }
+    class IDashBoardService {
+        <<interface>>
+    }
     class AthleteService
     class Authservice
     class BillingService
@@ -169,6 +203,8 @@ classDiagram
     IActivationPolicy <|.. MembershipExpirationPolicy
     ISaleService <|.. SaleService
 
+    IAthlteService <|.. AthleteService
+    IDashBoardService <|.. DashboardService
 ```
 
 ## 4. User interface (Swing)
@@ -227,6 +263,8 @@ classDiagram
     class AthleteListPanel_Badge
     class AthleteListPanel_PageButton
     class AthleteRegisterPanel
+    class HealthPanel
+    class CategoryChooser
     class CategoryPanel
     class CoachFormDialog
     class CoachFormDialog_Saver {
@@ -336,7 +374,8 @@ classDiagram
     JPanel <|-- ReportsPanel
     JButton <|-- ReportsPanel_TabButton
 
+    JPanel <|-- HealthPanel
+    JComboBox <|-- CategoryChooser : JComboBox~String~
 ```
 
-`Volleyballer` and `VolleyballerParser` are not implemented: they only show how the hierarchy
-and the persistence parsers can grow without modifying existing code (Open/Closed Principle).
+The diagram includes only classes in the current source code. `GeneralAthlete` extends `Athlete`; concrete repositories implement the corresponding interfaces.
