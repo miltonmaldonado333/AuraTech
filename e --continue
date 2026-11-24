@@ -1,0 +1,43 @@
+[1mdiff --cc src/main/java/com/creatinaboys/ui/panels/DisciplinePanel.java[m
+[1mindex c415509,eae3b8e..0000000[m
+[1m--- a/src/main/java/com/creatinaboys/ui/panels/DisciplinePanel.java[m
+[1m+++ b/src/main/java/com/creatinaboys/ui/panels/DisciplinePanel.java[m
+[36m@@@ -212,20 -200,22 +215,38 @@@[m [mpublic class DisciplinePanel extends JP[m
+          content.add(label("POR CATEGORÍA", ThemeConstants.FONT_SECTION, ThemeConstants.PLACEHOLDER));[m
+          content.add(Box.createVerticalStrut(10));[m
+  [m
+[32m++<<<<<<< HEAD[m
+[32m +        // Categorías del catálogo + las antiguas que aún tengan deportistas, agrupadas por nombre.[m
+[32m +        java.util.Map<String, Long> byCategory = new java.util.LinkedHashMap<>();[m
+[32m +        for (String name : categoryNames) {[m
+[32m +            byCategory.putIfAbsent(SpanishLabels.of(name), 0L);[m
+[32m +        }[m
+[32m +        for (Athlete a : members) {[m
+[32m +            if (a.getCategoryName() != null && !a.getCategoryName().isBlank()) {[m
+[32m +                byCategory.merge(SpanishLabels.of(a.getCategoryName()), 1L, Long::sum);[m
+[32m +            }[m
+[32m +        }[m
+[32m +        for (java.util.Map.Entry<String, Long> e : byCategory.entrySet()) {[m
+[32m +            content.add(categoryRow(e.getKey(), e.getValue(), members.size(), accent));[m
+[32m +            content.add(Box.createVerticalStrut(10));[m
+[32m++=======[m
+[32m+         Map<String, Long> byCategory = new LinkedHashMap<>();[m
+[32m+         for (CategoryEnum category : CategoryEnum.values()) {[m
+[32m+             byCategory.put(category.name(), 0L);[m
+[32m++>>>>>>> b85c675 (Feat: agregando disciplinas)[m
+          }[m
+[32m+         for (Athlete athlete : members) {[m
+[32m+             byCategory.merge(athlete.getCategoryName(), 1L, Long::sum);[m
+[32m+         }[m
+[32m+ [m
+[32m+         byCategory.forEach((category, count) -> {[m
+[32m+             String categoryLabel = switch (category == null ? "" : category) {[m
+[32m+                 case "CHILDREN", "YOUTH", "ADULTS", "" -> SpanishLabels.of(category);[m
+[32m+                 default -> category;[m
+[32m+             };[m
+[32m+             content.add(categoryRow(categoryLabel, count, members.size(), accent));[m
+[32m+             content.add(Box.createVerticalStrut(10));[m
+[32m+         });[m
+  [m
+          card.add(content, BorderLayout.NORTH);[m
+          return card;[m

@@ -1,4 +1,4 @@
-package com.creatinaboys.ui;
+package com.creatinaboys.ui.panels;
 
 import com.creatinaboys.exceptions.PersistenceException;
 import com.creatinaboys.exceptions.ValidationException;

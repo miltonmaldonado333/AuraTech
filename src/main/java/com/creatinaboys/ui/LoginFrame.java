@@ -10,6 +10,7 @@ import com.creatinaboys.ui.components.PlaceholderPasswordField;
 import com.creatinaboys.ui.components.PlaceholderTextField;
 import com.creatinaboys.ui.components.VectorIcon;
 import com.creatinaboys.ui.theme.ThemeConstants;
+import com.creatinaboys.ui.panels.RegisterPanel;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
