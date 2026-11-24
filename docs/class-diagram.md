@@ -1,6 +1,6 @@
 # Class Diagram
 
-Complete class diagram of the project (`com.creatinaboys`), generated from the source code: every class, interface, enum and inner class is included. Because of its size it is split by layer, so each diagram stays readable. The sections follow the architecture: model, repository, service and UI.
+Complete class diagram of the project (`com.creatinaboys`), updated against Aura-Tech.zip (November 2026): every principal class, interface, enum and inner class is included. Because of its size it is split by layer, so each diagram stays readable. The sections follow the architecture: model, repository, service and UI.
 
 **How to read it**
 
@@ -14,7 +14,7 @@ Complete class diagram of the project (`com.creatinaboys`), generated from the s
 | `+` `-` `#` `~` | public, private, protected, package-private |
 | `$` / `*` | static / abstract |
 
-Classes drawn without members are only the end point of a relationship: they are described in the section of their own layer. Swing parents (`JPanel`, `JFrame`, ...) are shown in `hierarchy-diagram.md`. In the UI sections, constants and Swing fields are omitted.
+Classes drawn without members are endpoints of a relationship: they are described in the section of their own layer. Swing parents (`JPanel`, `JFrame`, ...) are shown in `hierarchy-diagram.md`. In the UI sections, constants and Swing fields are omitted.
 
 ## 1. Model, exceptions and validation
 
@@ -23,31 +23,67 @@ Domain entities and enums (`model`), custom exceptions (`exceptions`) and input 
 ```mermaid
 classDiagram
     direction TB
+
+    class DuplicateDataException {
+        -DuplicateDataException_Field field
+        +DuplicateDataException(DuplicateDataException_Field, String)
+        +getField() DuplicateDataException_Field
+    }
+    class AgeCategory {
+        <<record>>
+        -String name
+        -BigDecimal monthlyFee
+        -List~Integer~ ages
+        +AgeCategory(String, BigDecimal, List~Integer~)
+        +toString() String
+        +hashCode() int
+        +equals(Object) boolean
+        +name() String
+        +monthlyFee() BigDecimal
+        +ages() List~Integer~
+    }
+    class AthleteKey {
+        <<record>>
+        -String id
+        -String discipline
+        +AthleteKey(String, String)
+        +toString() String
+        +hashCode() int
+        +equals(Object) boolean
+        +id() String
+        +discipline() String
+    }
+    class GeneralAthlete {
+        -String discipline
+        +GeneralAthlete(String, String, int, String, int, String)
+        +getDiscipline() String
+        +calculateFee(IBillingService) void
+    }
     class AthleteNotFoundException {
-        <<checked>>
+        -long serialVersionUID$
         -String searchedId
         +AthleteNotFoundException(String)
         +getSearchedId() String
     }
     class CoachNotFoundException {
-        <<checked>>
+        -long serialVersionUID$
         -String searchedId
         +CoachNotFoundException(String)
         +getSearchedId() String
     }
     class InvalidAgeException {
-        <<checked>>
+        -long serialVersionUID$
         -int enteredAge
         +InvalidAgeException(int)
         +getEnteredAge() int
     }
     class PersistenceException {
-        <<unchecked>>
+        -long serialVersionUID$
         +PersistenceException(String)
         +PersistenceException(String, Throwable)
     }
     class ValidationException {
-        <<checked>>
+        -long serialVersionUID$
         +ValidationException(String)
         +ValidationException(String, Throwable)
     }
@@ -60,13 +96,13 @@ classDiagram
         -String phone
         -int jerseyNumber
         -double monthlyFee
-        -CategoryEnum category
+        -String categoryName
         -boolean active
         -boolean manualOverride
         -LocalDate paidUntil
         #Athlete(String, String, int, String, int)
-        +calculateFee(IBillingService)* void
-        +getDiscipline()* String
+        +calculateFee(IBillingService) void
+        +getDiscipline() String
         #requireValidAge(int)$ int
         #requireText(String, String)$ String
         +getId() String
@@ -83,6 +119,8 @@ classDiagram
         +setMonthlyFee(double) void
         +getCategory() CategoryEnum
         +setCategory(CategoryEnum) void
+        +getCategoryName() String
+        +setCategoryName(String) void
         +isActive() boolean
         +setActive(boolean) void
         +isManualOverride() boolean
@@ -90,11 +128,6 @@ classDiagram
         +clearManualOverride() void
         +getPaidUntil() LocalDate
         +setPaidUntil(LocalDate) void
-        +renewMembership(int) void
-        +isMembershipExpired(int) boolean
-        +equals(Object) boolean
-        +hashCode() int
-        +toString() String
     }
     class Basketballer {
         -double height
@@ -164,6 +197,8 @@ classDiagram
         -List~InjuryRecord~ injuries
         +HealthRecord(String, FitnessStatusEnum, LocalDate, String)
         +addInjury(InjuryRecord) void
+        +findInjury(String) Optional~InjuryRecord~
+        +removeInjury(String) boolean
         +updateFitnessStatus(FitnessStatusEnum, String, LocalDate) boolean
         +getAthleteId() String
         +getFitnessStatus() FitnessStatusEnum
@@ -199,11 +234,15 @@ classDiagram
         -double amount
         -LocalDate paymentDate
         -YearMonth period
+        -String discipline
+        +Payment(String, double, LocalDate, YearMonth, String)
         +Payment(String, double, LocalDate, YearMonth)
         +getAthleteId() String
         +getAmount() double
         +getPaymentDate() LocalDate
         +getPeriod() YearMonth
+        +getDiscipline() String
+        +belongsTo(AthleteKey) boolean
         +toString() String
     }
     class PaymentStatusEnum {
@@ -228,7 +267,6 @@ classDiagram
         +getPasswordHash() String
     }
     class DataValidator {
-        <<utility>>
         +int MIN_AGE$
         +int MAX_AGE$
         +int MAX_JERSEY_NUMBER$
@@ -261,6 +299,14 @@ classDiagram
     Athlete ..> IBillingService : uses
     Basketballer ..> IBillingService : uses
     Footballer ..> IBillingService : uses
+    Athlete <|-- GeneralAthlete
+    ValidationException <|-- DuplicateDataException
+    Athlete ..> AthleteKey : creates identity
+    Athlete ..> AgeCategory : category fee
+    GeneralAthlete ..> IBillingService : calculates fee
+    GeneralAthlete ..> AgeCategory : uses
+    AgeCategory ..> BigDecimal : fee
+    Payment ..> AthleteKey : belongs to registration
 ```
 
 ## 2. Repository layer
@@ -270,6 +316,41 @@ Repository interfaces, file-based implementations, parsers and the text helpers 
 ```mermaid
 classDiagram
     direction TB
+
+    class ICategoryRepository {
+        <<interface>>
+        +findAll() List~AgeCategory~
+        +create(String, BigDecimal, int, int) boolean
+    }
+    class PostgresAthleteRepository {
+        -String CONSULTA$
+        +PostgresAthleteRepository()
+        +save(Athlete) boolean
+        +findByKey(AthleteKey) Athlete
+        +findById(String) List~Athlete~
+        +findAll() List~Athlete~
+        +deleteByKey(AthleteKey) boolean
+        +update(Athlete) boolean
+        -guardarPersona(Connection, Athlete) void
+        -datosInscripcion(PreparedStatement, Athlete) void
+        -asignarDatosDeporte(PreparedStatement, Athlete, int, int) void
+        -convertir(ResultSet) Athlete
+    }
+    class PostgresCategoryRepository {
+        -String SELECT_CATEGORIES$
+        -String CREATE_CATEGORY$
+        -String ASSIGN_AGES$
+        +PostgresCategoryRepository()
+        +findAll() List~AgeCategory~
+        +create(String, BigDecimal, int, int) boolean
+        -catalogError(String, SQLException) PersistenceException
+    }
+    class PostgresDisciplineRepository {
+        +PostgresDisciplineRepository()
+        +findAll() List~String~
+        +add(String) boolean
+        -catalogError(String, SQLException) PersistenceException
+    }
     class AthleteParser {
         <<interface>>
         +getType() String
@@ -278,24 +359,28 @@ classDiagram
     }
     class AthleteParserRegistry {
         -Map~String, AthleteParser~ readerMap
-        -Map~Class, AthleteParser~ writerMap
-        +register(Class, AthleteParser) AthleteParserRegistry
+        -Map~Class~Object~, AthleteParser~ writerMap
+        +AthleteParserRegistry()
+        +register(Class~Object~, AthleteParser) AthleteParserRegistry
         +toTextLine(Athlete) String
         +fromTextLine(String, String[]) Athlete
-        -findWriter(Class) AthleteParser
+        -findWriter(Class~Object~) AthleteParser
     }
     class AthleteRepository {
         -List~Athlete~ athleteList
+        +AthleteRepository()
         +save(Athlete) boolean
-        +findById(String) Athlete
+        +findByKey(AthleteKey) Athlete
+        +findById(String) List~Athlete~
         +findAll() List~Athlete~
-        +deleteById(String) boolean
+        +deleteByKey(AthleteKey) boolean
         +update(Athlete) boolean
-        -indexOf(String) int
+        -indexOf(AthleteKey) int
     }
     class BasketballerParser {
         -String TYPE$
         -int FIELD_COUNT$
+        +BasketballerParser()
         +getType() String
         +toTextLine(Athlete) String
         +fromTextFields(String[]) Athlete
@@ -303,6 +388,7 @@ classDiagram
     class CoachParser {
         -String TYPE$
         -int FIELD_COUNT$
+        +CoachParser()
         +toTextLine(Coach) String
         +fromTextFields(String[]) Coach
     }
@@ -316,9 +402,10 @@ classDiagram
         +FileAthleteRepository(String, AthleteParserRegistry)
         -defaultParsers()$ AthleteParserRegistry
         +save(Athlete) boolean
-        +findById(String) Athlete
+        +findByKey(AthleteKey) Athlete
+        +findById(String) List~Athlete~
         +findAll() List~Athlete~
-        +deleteById(String) boolean
+        +deleteByKey(AthleteKey) boolean
         +update(Athlete) boolean
         -saveAll(List~Athlete~) void
         -toLine(Athlete) String
@@ -345,6 +432,7 @@ classDiagram
         +FileDisciplineRepository()
         +FileDisciplineRepository(String)
         +findAll() List~String~
+        +add(String) boolean
         +saveAll(List~String~) void
     }
     class FileHealthRepository {
@@ -367,11 +455,11 @@ classDiagram
         +FilePaymentRepository()
         +FilePaymentRepository(String)
         +save(Payment) boolean
+        +replaceAll(List~Payment~) void
         +findAll() List~Payment~
         +findByAthleteId(String) List~Payment~
     }
     class FileStorage {
-        <<utility>>
         -Charset LEGACY_CHARSET$
         -FileStorage()
         ~readLines(Path)$ List~String~
@@ -390,6 +478,7 @@ classDiagram
     class FootballerParser {
         -String TYPE$
         -int FIELD_COUNT$
+        +FootballerParser()
         +getType() String
         +toTextLine(Athlete) String
         +fromTextFields(String[]) Athlete
@@ -397,15 +486,17 @@ classDiagram
     class HealthRecordParser {
         -String TYPE$
         -int FIELD_COUNT$
+        +HealthRecordParser()
         +toTextLine(HealthRecord) String
         +fromTextFields(String[]) HealthRecord
     }
     class IAthleteRepository {
         <<interface>>
         +save(Athlete) boolean
-        +findById(String) Athlete
+        +findByKey(AthleteKey) Athlete
+        +findById(String) List~Athlete~
         +findAll() List~Athlete~
-        +deleteById(String) boolean
+        +deleteByKey(AthleteKey) boolean
         +update(Athlete) boolean
     }
     class ICoachRepository {
@@ -420,7 +511,7 @@ classDiagram
     class IDisciplineRepository {
         <<interface>>
         +findAll() List~String~
-        +saveAll(List~String~) void
+        +add(String) boolean
     }
     class IHealthRepository {
         <<interface>>
@@ -435,6 +526,8 @@ classDiagram
         +save(Payment) boolean
         +findAll() List~Payment~
         +findByAthleteId(String) List~Payment~
+        +replaceAll(List~Payment~) void
+        +findByAthleteKey(AthleteKey) List~Payment~
     }
     class Iuserrepository {
         <<interface>>
@@ -444,12 +537,13 @@ classDiagram
     }
     class PaymentParser {
         -String TYPE$
+        -int LEGACY_FIELD_COUNT$
         -int FIELD_COUNT$
+        +PaymentParser()
         +toTextLine(Payment) String
         +fromTextFields(String[]) Payment
     }
     class TextCodec {
-        <<utility>>
         ~String LEGACY_EMPTY$
         -String SPECIAL$
         -TextCodec()
@@ -522,6 +616,15 @@ classDiagram
     FootballerParser ..> TextCodec : uses
     HealthRecordParser ..> TextCodec : uses
     PaymentParser ..> TextCodec : uses
+    IAthleteRepository <|.. PostgresAthleteRepository
+    ICategoryRepository <|.. PostgresCategoryRepository
+    IDisciplineRepository <|.. PostgresDisciplineRepository
+    PostgresAthleteRepository --> Athlete
+    PostgresAthleteRepository ..> AthleteKey : lookup
+    PostgresAthleteRepository ..> conection : JDBC connection
+    PostgresCategoryRepository --> AgeCategory
+    PostgresCategoryRepository ..> conection : JDBC connection
+    PostgresDisciplineRepository ..> conection : JDBC connection
 ```
 
 ## 3. Service layer
@@ -531,20 +634,115 @@ Business services, their interfaces and the activation policy (`service`).
 ```mermaid
 classDiagram
     direction TB
+
+    class AthleteUniquenessPolicy {
+        +AthleteUniquenessPolicy()
+        +check(Athlete, List~Athlete~, AthleteKey) void
+    }
+    class CategoryService {
+        -BigDecimal MAX_FEE$
+        -ICategoryRepository repository
+        +CategoryService(ICategoryRepository)
+        +getCategories() List~AgeCategory~
+        +createCategory(String, int, int, BigDecimal) void
+    }
+    class DashboardService {
+        -double EPSILON$
+        -IAthleteRepository athleteRepository
+        -IPaymentRepository paymentRepository
+        -ICoachService coachService
+        -Clock clock
+        -CategoryService categoryService
+        +DashboardService(IAthleteRepository, IPaymentRepository, ICoachService)
+        +DashboardService(IAthleteRepository, IPaymentRepository, ICoachService, CategoryService)
+        +DashboardService(IAthleteRepository, IPaymentRepository, ICoachService, Clock)
+        +DashboardService(IAthleteRepository, IPaymentRepository, ICoachService, CategoryService, Clock)
+        +loadDashboard() DashboardSnapshot
+        -calculateMonthlyPayments(List~Athlete~, List~Payment~, YearMonth) Map~AthleteKey, Double~
+    }
+    class DashboardSnapshot {
+        <<record>>
+        -List~Athlete~ athletes
+        -long active
+        -int coaches
+        -Map~AthleteKey, Double~ paidMap
+        -double collected
+        -double expected
+        -List~Athlete~ pending
+        -List~Payment~ history
+        -Map~String, String~ names
+        -List~String~ categories
+        +DashboardSnapshot(List~Athlete~, long, int, Map~AthleteKey, Double~, double, double, List~Athlete~, List~Payment~, Map~String, String~, List~String~)
+        +toString() String
+        +hashCode() int
+        +equals(Object) boolean
+        +athletes() List~Athlete~
+        +active() long
+        +coaches() int
+        +paidMap() Map~AthleteKey, Double~
+        +collected() double
+        +expected() double
+        +pending() List~Athlete~
+        +history() List~Payment~
+        +names() Map~String, String~
+        +categories() List~String~
+    }
+    class IAthlteService {
+        <<interface>>
+        +registerAthlete(Athlete) boolean
+        +registerAthlete(Athlete, String) boolean
+        +categoryOptionsForAge(int) List~AgeCategory~
+        +updateAthleteData(AthleteKey, String, int, String, int, String, String) boolean
+        +findAthlete(AthleteKey) Athlete
+        +findAthletesById(String) List~Athlete~
+        +getAllAthletes() List~Athlete~
+        +existsByKey(AthleteKey) boolean
+        +getTotalAthletesCount() int
+        +getAthletesCountByType(Class~T~) long
+        +updateAthleteData(AthleteKey, String, int, String, int, String) boolean
+        +categoryForAge(int) CategoryEnum
+        +feeForAge(int) double
+        +deleteAthlete(AthleteKey) boolean
+        +toggleAthleteStatus(AthleteKey) boolean
+        +setAthleteActive(AthleteKey, boolean) boolean
+        +renewMembership(AthleteKey, int) boolean
+        +applyActivationPolicy(IActivationPolicy) void
+    }
+    class IDashBoardService {
+        <<interface>>
+        +loadDashboard() DashboardSnapshot
+    }
+    class PaymentDisciplineMigration {
+        -IPaymentRepository paymentRepository
+        -IAthleteRepository athleteRepository
+        +PaymentDisciplineMigration(IPaymentRepository, IAthleteRepository)
+        +run() int
+        -groupAthletesById(List~Athlete~) Map~String, List~Athlete~~
+    }
     class AthleteService {
         -IAthleteRepository repository
         -IBillingService billingService
+        -AthleteUniquenessPolicy uniqueness
         +AthleteService(IAthleteRepository, IBillingService)
         +registerAthlete(Athlete) boolean
-        +findAthlete(String) Athlete
+        +registerAthlete(Athlete, String) boolean
+        +updateAthleteData(AthleteKey, String, int, String, int, String) boolean
+        +updateAthleteData(AthleteKey, String, int, String, int, String, String) boolean
+        +categoryOptionsForAge(int) List~AgeCategory~
+        -resolveCategory(int, String) AgeCategory
+        +categoryForAge(int) CategoryEnum
+        +feeForAge(int) double
+        +findAthlete(AthleteKey) Athlete
+        +findAthletesById(String) List~Athlete~
         +getAllAthletes() List~Athlete~
-        +deleteAthlete(String) boolean
+        +existsByKey(AthleteKey) boolean
+        +deleteAthlete(AthleteKey) boolean
         +getTotalAthletesCount() int
         +getAthletesCountByType(Class~T~) long
         +applyActivationPolicy(IActivationPolicy) void
-        +toggleAthleteStatus(String) boolean
-        +setAthleteActive(String, boolean) boolean
-        +renewMembership(String, int) boolean
+        +toggleAthleteStatus(AthleteKey) boolean
+        +setAthleteActive(AthleteKey, boolean) boolean
+        +renewMembership(AthleteKey, int) boolean
         -persist(Athlete) void
     }
     class Authservice {
@@ -567,6 +765,10 @@ classDiagram
         -hash(char[], byte[])$ byte[]
     }
     class BillingService {
+        -CategoryService categoryService
+        +BillingService(CategoryService)
+        +determineEnrollmentCategory(int) AgeCategory
+        +findEnrollmentCategories(int) List~AgeCategory~
         +determineCategory(int) CategoryEnum
         +calculateFee(int) double
     }
@@ -593,7 +795,7 @@ classDiagram
         +DisciplineService()
         +DisciplineService(List~String~)
         +DisciplineService(IDisciplineRepository)
-        -load(List~String~) int
+        -load(List~String~) void
         +getAvailableDisciplines() List~String~
         +registerDiscipline(String) boolean
         +isDisciplineAvailable(String) boolean
@@ -609,6 +811,8 @@ classDiagram
         +saveOrUpdateHealthRecord(HealthRecord) boolean
         +getHealthRecordByAthleteId(String) Optional~HealthRecord~
         +addInjuryToAthlete(String, InjuryRecord) boolean
+        +updateInjury(String, String, String, String, String) boolean
+        +removeInjury(String, String) boolean
         +updateFitnessStatus(String, FitnessStatusEnum, String, LocalDate) boolean
         +isAthleteFitToTrain(String) boolean
         +getAllHealthRecords() List~HealthRecord~
@@ -628,6 +832,8 @@ classDiagram
         <<interface>>
         +calculateFee(int) double
         +determineCategory(int) CategoryEnum
+        +determineEnrollmentCategory(int) AgeCategory
+        +findEnrollmentCategories(int) List~AgeCategory~
     }
     class ICoachService {
         <<interface>>
@@ -656,20 +862,23 @@ classDiagram
         +saveOrUpdateHealthRecord(HealthRecord) boolean
         +getHealthRecordByAthleteId(String) Optional~HealthRecord~
         +addInjuryToAthlete(String, InjuryRecord) boolean
+        +updateInjury(String, String, String, String, String) boolean
+        +removeInjury(String, String) boolean
         +updateFitnessStatus(String, FitnessStatusEnum, String, LocalDate) boolean
         +isAthleteFitToTrain(String) boolean
         +getAllHealthRecords() List~HealthRecord~
     }
     class ISaleService {
         <<interface>>
-        +processMonthlyPayment(String, double) boolean
+        +processMonthlyPayment(AthleteKey, double) boolean
+        +getPendingBalance(AthleteKey) double
         +calculateEstimatedMonthlyRevenue() double
         +calculateTotalCollectedRevenue() double
         +getRevenueByDiscipline() Map~String, Double~
         +getRevenueByCategory() Map~CategoryEnum, Double~
+        +getRevenueByCategoryName() Map~String, Double~
         +getAthletesWithPendingPayment() List~Athlete~
-        +getPendingBalance(String) double
-        +getPaidThisMonthByAthlete() Map~String, Double~
+        +getPaidThisMonthByAthlete() Map~AthleteKey, Double~
         +getPaymentHistory() List~Payment~
     }
     class MembershipExpirationPolicy {
@@ -685,19 +894,20 @@ classDiagram
         +SaleService(IAthleteRepository, IBillingService)
         +SaleService(IAthleteRepository, IBillingService, IPaymentRepository)
         +SaleService(IAthleteRepository, IBillingService, IPaymentRepository, Clock)
-        +processMonthlyPayment(String, double) boolean
-        +getPendingBalance(String) double
+        +processMonthlyPayment(AthleteKey, double) boolean
+        +getPendingBalance(AthleteKey) double
         +calculateEstimatedMonthlyRevenue() double
         +calculateTotalCollectedRevenue() double
         +getRevenueByDiscipline() Map~String, Double~
         +getRevenueByCategory() Map~CategoryEnum, Double~
+        +getRevenueByCategoryName() Map~String, Double~
         +getAthletesWithPendingPayment() List~Athlete~
-        +getPaidThisMonthByAthlete() Map~String, Double~
+        +getPaidThisMonthByAthlete() Map~AthleteKey, Double~
         +getPaymentHistory() List~Payment~
         +getAthletesByDiscipline(String) List~Athlete~
         +getAthletesByCategory(CategoryEnum) List~Athlete~
         -currentPeriod() YearMonth
-        -paidThisMonthByAthlete() Map~String, Double~
+        -paidThisMonth() Map~AthleteKey, Double~
     }
 
     IAuthService <|.. Authservice
@@ -742,6 +952,21 @@ classDiagram
     SaleService ..> AthleteNotFoundException : throws
     AthleteService ..> IActivationPolicy : uses
     SaleService ..> IBillingService : uses
+    IAthlteService <|.. AthleteService
+    IDashBoardService <|.. DashboardService
+    AthleteService --> AthleteUniquenessPolicy
+    AthleteService ..> AgeCategory : selects category
+    CategoryService --> ICategoryRepository
+    CategoryService ..> AgeCategory : manages
+    BillingService --> ICategoryRepository
+    BillingService ..> AgeCategory : calculates fee
+    DashboardService --> IAthleteRepository
+    DashboardService --> ICoachRepository
+    DashboardService --> ISaleService
+    DashboardService ..> DashboardSnapshot : creates
+    PaymentDisciplineMigration --> IPaymentRepository
+    PaymentDisciplineMigration --> IAthleteRepository
+    AthleteUniquenessPolicy ..> DuplicateDataException : throws
 ```
 
 ## 4. UI: frames, login and theme
@@ -751,6 +976,8 @@ Windows and the login/register flow (`ui`, `ui.theme`). `RegisterPanel` is decla
 ```mermaid
 classDiagram
     direction TB
+
+
     class AthleteConsultFrame {
         -AthleteService service
         +AthleteConsultFrame(AthleteService)
@@ -762,14 +989,13 @@ classDiagram
         +clearFields() void
     }
     class LoginFrame {
+        -int MAX_ATTEMPTS$
+        -int LOCK_SECONDS$
         -IAuthService authService
-        -Consumer~String~ onSuccess
+        -function.Consumer~String~ onSuccess
         -PlaceholderTextField txtUser
         -PlaceholderPasswordField txtPassword
-        -ModernButton btnLogin
-        -RegisterPanel registerPanel
-        -int failedAttempts
-        +LoginFrame(IAuthService, Consumer~String~)
+        +LoginFrame(IAuthService, function.Consumer~String~)
         -buildBrandSide() JPanel
         -buildFormSide() JPanel
         -showRegisterCard() void
@@ -782,44 +1008,45 @@ classDiagram
         -showInfo(String) void
     }
     class PrincipalFrame {
+        +PrincipalFrame()
         +openRegisterForm() void
         +openConsultForm() void
     }
     class PrincipalFrames {
         -AthleteService athleteService
         -ISaleService saleService
-        -IBillingService billingService
+        -CategoryService categoryService
         -IDisciplineService disciplineService
         -ICoachService coachService
-        -List~SidebarButton~ sidebarButtons
-        -List~String~ menuNames
-        -HomePanel homePanel
-        -AthleteListPanel athleteListPanel
-        -CategoryPanel categoryPanel
-        -DisciplinePanel disciplinePanel
-        -CoachPanel coachPanel
-        -PaymentPanel paymentPanel
-        -ReportsPanel reportsPanel
-        -Runnable onLogout
-        +PrincipalFrames(AthleteService, ISaleService, IBillingService, IDisciplineService, ICoachService)
+        -IHealthService healthService
+        +PrincipalFrames(AthleteService, ISaleService, CategoryService, IDisciplineService, ICoachService, IHealthService, IDashBoardService)
         +setOnLogout(Runnable) void
         +setCurrentUser(String) void
         -navigateTo(String) void
         -initFrame() void
         -initSidebar() void
         -initMainContent() void
+        -ensurePanel(String) boolean
+        -refreshPanel(String) void
         -selectSidebarButton(SidebarButton) void
     }
-    class ThemeConstants
+    class ThemeConstants {
+        +Color SIDEBAR_BG$
+        +Color SIDEBAR_HOVER$
+        +Color SIDEBAR_ACTIVE$
+        +Color SIDEBAR_TEXT$
+        +Color PRIMARY_BLUE$
+        +Color PRIMARY_HOVER$
+        +ThemeConstants()
+    }
     class RegisterPanel {
         -IAuthService authService
-        -Consumer~String~ onRegistered
+        -function.Consumer~String~ onRegistered
         -Runnable onBack
         -PlaceholderTextField txtUser
         -PlaceholderPasswordField txtPassword
         -PlaceholderPasswordField txtConfirm
-        -ModernButton btnRegister
-        +RegisterPanel(IAuthService, Consumer~String~, Runnable)
+        +RegisterPanel(IAuthService, function.Consumer~String~, Runnable)
         +getDefaultButton() JButton
         +reset() void
         -attemptRegister() void
@@ -863,6 +1090,7 @@ classDiagram
     PrincipalFrames ..> ThemeConstants : uses
     RegisterPanel ..> ThemeConstants : uses
     RegisterPanel ..> VectorIcon : uses
+
 ```
 
 ## 5. UI: panels and dialogs
@@ -872,12 +1100,44 @@ Application screens (`ui.panels`). `Outer_Inner` is an inner class declared insi
 ```mermaid
 classDiagram
     direction TB
+
+    class HealthPanel {
+        -format.DateTimeFormatter DATE_FMT$
+        -Color OK_GREEN$
+        -Color AMBER$
+        -String ST_TREATMENT$
+        -String ST_OBSERVATION$
+        -String ST_RECOVERED$
+        -String[] INJURY_STATUS$
+        -Map~String, Color[]~ INJURY_PALETTE$
+        +HealthPanel(AthleteService, IHealthService)
+        -buildHeader() JComponent
+        -buildStats() JComponent
+        -statCard(VectorIcon_Type, Color, JLabel, String)$ JComponent
+        -buildForm() JComponent
+        -buildInjuriesCard() JComponent
+        +refresh() void
+        -reloadStats() void
+        -loadRecord() void
+        -showSummary(HealthRecord, boolean) void
+        -saveRecord() void
+        -addInjury() void
+        -editInjury(InjuryRecord) void
+        -injuryForm(PlaceholderTextField, ModernComboBox, PlaceholderTextField)$ JPanel
+        -selected() HealthPanel_Person
+        -selectedFitness() FitnessStatusEnum
+        -descriptions()$ String[]
+        -feedback(String, boolean) void
+    }
     class AthleteListPanel {
-        -AthleteService athleteService
-        -PlaceholderTextField txtSearch
-        -List~Athlete~ filtered
-        -int currentPage
+        -Color SELECTION_BG$
+        -Color GRID_COLOR$
+        -String STATUS_ACTIVE$
+        -String STATUS_INACTIVE$
+        -int COL_STATUS$
+        -format.DateTimeFormatter DATE_FMT$
         +AthleteListPanel(AthleteService)
+        +AthleteListPanel(AthleteService, ISaleService)
         -buildHeader() JComponent
         -buildCard() JComponent
         -buildTable() JComponent
@@ -887,8 +1147,14 @@ classDiagram
         -applyFilterKeepingPage() void
         -refresh() void
         -rebuildPagination(int) void
-        -toggleSelectedStatus() void
-        -deleteSelectedAthlete() void
+        -buildDetailPanel() JComponent
+        -athleteAtRow(int) Athlete
+        -onSelectionChanged() void
+        -restoreSelection() void
+        -showDetail(AthleteKey) void
+        -setDetailVisible(boolean) void
+        -addSection(String) void
+        -addRow(String, String) void
     }
     class AthleteListPanel_RoundedPanel {
         ~RoundedPanel()
@@ -913,24 +1179,23 @@ classDiagram
     }
     class AthleteRegisterPanel {
         -AthleteService athleteService
+        -IDisciplineService disciplineService
         -PlaceholderTextField txtId
         -PlaceholderTextField txtName
         -PlaceholderTextField txtAge
         -PlaceholderTextField txtPhone
-        -PlaceholderTextField txtJersey
-        -PlaceholderTextField txtSpecific
-        -ModernComboBox cmbDiscipline
-        -InputBox boxSpecific
-        +AthleteRegisterPanel(AthleteService)
+        +AthleteRegisterPanel(AthleteService, IDisciplineService)
         -buildHeader() JComponent
         -buildScrollableForm() JComponent
         -buildCard() JComponent
         -field(String) PlaceholderTextField
         -label(String) JLabel
         -setRequiredText(JLabel, String) void
-        -section(String, Type) JComponent
+        -section(String, VectorIcon_Type) JComponent
         -addGroup(JPanel, JLabel, JComponent, GridBagConstraints, int, int) void
         -addFull(JPanel, JComponent, GridBagConstraints, int) void
+        +refreshDisciplines() void
+        -updateSpecificVisibility() void
         -updateDisciplineFields() void
         -saveAthlete() void
         -required(JTextField) String
@@ -939,38 +1204,41 @@ classDiagram
     }
     class CategoryPanel {
         -AthleteService athleteService
-        -IBillingService billingService
+        -CategoryService categoryService
         -IDisciplineService disciplineService
-        +CategoryPanel(AthleteService, IBillingService, IDisciplineService)
+        -JPanel cardsRow
+        -JLabel lblSummary
+        -ModernButton addButton
+        +CategoryPanel(AthleteService, CategoryService, IDisciplineService)
         -buildHeader() JComponent
         +refresh() void
-        -buildCategoryCard(CategoryEnum, int[], List~Athlete~, List~String~, int) JComponent
-        -computeAgeRanges() Map~CategoryEnum, int[]~
-        -feeOf(int[]) double
-        -rangeText(int[])$ String
-        -accentOf(CategoryEnum)$ Color
-        -money(double)$ String
+        -renderCategories(CategoryPanel_CategoryView) void
+        -setBusy(boolean, String) void
+        -showCategoryForm(CategoryPanel_CategoryInput) void
+        -ageSpinner(int) JSpinner
+        -saveCategory(CategoryPanel_CategoryInput) void
+        -buildCategoryCard(AgeCategory, List~Athlete~, List~String~, int) JComponent
+        -categoryLabel(String)$ String
+        -rangeText(List~Integer~)$ String
         -label(String, Font, Color)$ JLabel
         -metricRow(String, String)$ JComponent
         -separator()$ JComponent
     }
     class CoachFormDialog {
         -Coach existing
-        -Saver saver
+        -CoachFormDialog_Saver saver
+        -List~String~ disciplines
         -boolean saved
         -PlaceholderTextField txtId
         -PlaceholderTextField txtName
-        -PlaceholderTextField txtPhone
-        -ModernComboBox cmbDiscipline
-        -ModernComboBox cmbCategory
-        +CoachFormDialog(Window, Coach, Saver)
+        +CoachFormDialog(Window, Coach, List~String~, CoachFormDialog_Saver)
         +isSaved() boolean
         -buildCard() JComponent
         -label(String, boolean) JLabel
         -group(JLabel, JComponent) JPanel
         -addGroup(JPanel, JLabel, JComponent, GridBagConstraints, int, int) void
         -fillFromCoach(Coach) void
-        -onSave(ActionEvent) void
+        -onSave(event.ActionEvent) void
         -showError(String) void
     }
     class CoachFormDialog_Saver {
@@ -978,12 +1246,13 @@ classDiagram
         +save(Coach) void
     }
     class CoachPanel {
-        -ICoachService coachService
-        -PlaceholderTextField txtSearch
-        -List~Coach~ filtered
-        -int currentPage
-        -int pageStart
-        +CoachPanel(ICoachService)
+        -Color SELECTION_BG$
+        -Color GRID_COLOR$
+        -String STATUS_ACTIVE$
+        -String STATUS_INACTIVE$
+        -int COL_DISCIPLINE$
+        -int COL_CATEGORY$
+        +CoachPanel(ICoachService, IDisciplineService)
         -buildHeader() JComponent
         -buildCard() JComponent
         -buildTable() JComponent
@@ -995,10 +1264,11 @@ classDiagram
         -rebuildPagination(int) void
         -coachAt(int) Coach
         -hit(int, int) boolean
-        -isClickable(MouseEvent) boolean
-        -handleClick(MouseEvent) void
+        -isClickable(event.MouseEvent) boolean
+        -handleClick(event.MouseEvent) void
         -newCoach() void
         -editCoach(Coach) void
+        -showCoachForm(Coach, CoachFormDialog_Saver) boolean
         -toggleStatus(Coach) void
         -deleteCoach(Coach) void
     }
@@ -1031,49 +1301,48 @@ classDiagram
         #paintComponent(Graphics) void
     }
     class DisciplinePanel {
+        -Color[] ACCENTS$
+        -Color OK_GREEN$
         -AthleteService athleteService
         -IDisciplineService disciplineService
-        -PlaceholderTextField txtName
+        -CategoryService categoryService
+        -JPanel grid
         +DisciplinePanel(AthleteService, IDisciplineService)
+        +DisciplinePanel(AthleteService, IDisciplineService, CategoryService)
         -buildHeader() JComponent
         -addDiscipline() void
         -feedback(String, boolean) void
         +refresh() void
-        -buildCard(String, List~Athlete~, Color) JComponent
+        -buildCard(String, List~Athlete~, List~String~, Color) JComponent
         -categoryRow(String, long, int, Color)$ JComponent
         -label(String, Font, Color)$ JLabel
     }
     class HomePanel {
-        -AthleteService athleteService
-        -ISaleService saleService
-        -ICoachService coachService
-        -Consumer~String~ navigate
-        -ScrollBody body
-        -String username
-        -boolean compact
-        +HomePanel(AthleteService, ISaleService, ICoachService, Consumer~String~)
+        -Locale ES$
+        -Color GREEN$
+        -Color AMBER$
+        -Color SKY$
+        -Color TRACK$
+        -Color[] PALETTE$
+        +HomePanel(IDashBoardService, function.Consumer~String~)
         +setUsername(String) void
         +refresh() void
-        -build() void
+        -showInitialView() void
+        -renderDashboard() void
+        -showStatus(String, Color) void
+        -build(DashboardSnapshot) void
         -addRow(JComponent, int) void
         -grid(int, int)$ JPanel
         -buildHero() JComponent
-        -quickAction(String, VectorIcon.Type, String, int) ModernButton
-        -statCard(VectorIcon.Type, Color, String, String, String) JComponent
+        -quickAction(String, VectorIcon_Type, String, int) ModernButton
+        -statCard(VectorIcon_Type, Color, String, String, String) JComponent
         -card(String, String, JComponent) JComponent
         -collectionBody(double, double) JComponent
         -legendRow(Color, String, String) JComponent
         -disciplineBars(List~Athlete~) JComponent
-        -categoryBars(List~Athlete~) JComponent
+        -categoryBars(List~Athlete~, List~String~) JComponent
         -bars(Map~String, Long~, int, String) JComponent
         -recentPayments(List~Payment~, Map~String, String~) JComponent
-        -pendingList(List~Athlete~, Map~String, Double~) JComponent
-        -personRow(String, String, String, Color, Color) JComponent
-        -section(String, JComponent) JComponent
-        -emptyState(String, Color) JComponent
-        -top(JComponent)$ JComponent
-        -label(String, Font, Color)$ JLabel
-        -capitalize(String)$ String
     }
     class HomePanel_ScrollBody {
         +getPreferredScrollableViewportSize() Dimension
@@ -1100,41 +1369,31 @@ classDiagram
         #paintComponent(Graphics) void
     }
     class PaymentPanel {
-        -AthleteService athleteService
-        -ISaleService saleService
-        -ModernComboBox cmbAthlete
-        -PlaceholderTextField txtAmount
-        -TabButton tabStatus
-        -TabButton tabHistory
-        -List~Athlete~ athletes
-        -boolean updatingCombo
+        -format.DateTimeFormatter DATE_FMT$
+        -String VIEW_STATUS$
+        -String VIEW_HISTORY$
+        -String SEPARATOR$
+        -Color OK_GREEN$
+        -Color AMBER$
         +PaymentPanel(AthleteService, ISaleService)
         -buildHeader() JComponent
         -buildStats() JComponent
-        -statCard(Type, Color, JLabel, String)$ JComponent
+        -statCard(VectorIcon_Type, Color, JLabel, String)$ JComponent
         -buildForm() JComponent
         -buildTablesCard() JComponent
         -showTab(String) void
         +refresh() void
-        -reloadCombo() void
+        -reloadCombo(AthleteKey) void
         -reloadStats() void
         -reloadStatusTable() void
         -reloadHistoryTable() void
         -updateAthleteInfo(boolean) void
         -fillBalance() void
         -registerPayment() void
+        -warn(String) void
         -feedback(String, boolean) void
-        -selectedAthleteId() String
         -selectedAthlete() Athlete
-        -selectInCombo(String) void
-        -selectAthleteFromTable() void
-        -paidOf(Athlete) double
-        -statusOf(Athlete) PaymentStatusEnum
-        -statValue()$ JLabel
-        -infoValue()$ JLabel
-        -infoKey(String)$ JLabel
-        -sectionLabel(String)$ JLabel
-        -fullWidth(JComponent)$ JComponent
+        -selectedKey() AthleteKey
     }
     class PaymentPanel_TabButton {
         -boolean active
@@ -1143,22 +1402,24 @@ classDiagram
         #paintComponent(Graphics) void
     }
     class ReportsPanel {
+        -String VIEW_PENDING$
+        -String VIEW_MONTHLY$
+        -Color OK_GREEN$
+        -Map~String, Color[]~ STATUS_PALETTE$
         -AthleteService athleteService
         -ISaleService saleService
-        -TabButton tabPending
-        -TabButton tabMonthly
         +ReportsPanel(AthleteService, ISaleService)
         -buildHeader() JComponent
         -buildStats() JComponent
-        -statCard(Type, Color, JLabel, String)$ JComponent
+        -statCard(VectorIcon_Type, Color, JLabel, String)$ JComponent
         -buildRevenueCard() JComponent
         -buildTablesCard() JComponent
         -showTab(String) void
         +refresh() void
-        -reloadStats(List~Athlete~, Map~String, Double~) void
+        -reloadStats(List~Athlete~, Map~AthleteKey, Double~) void
         -reloadRevenue() void
         -addRevenueRow(String, double, double, Color) void
-        -reloadPendingTable(List~Athlete~, Map~String, Double~) void
+        -reloadPendingTable(List~Athlete~, Map~AthleteKey, Double~) void
         -reloadMonthlyTable() void
         -statValue()$ JLabel
         -cardTitle(String)$ JLabel
@@ -1272,6 +1533,9 @@ classDiagram
     ReportsPanel ..> ModernTable : uses
     ReportsPanel ..> Money : uses
     ReportsPanel ..> SpanishLabels : uses
+    JPanel <|-- HealthPanel
+    HealthPanel --> IHealthService : uses
+    CategoryPanel --> CategoryService : manages categories
 ```
 
 ## 6. UI: reusable components
@@ -1281,8 +1545,16 @@ Swing components, icons, label/search helpers (`ui.components`).
 ```mermaid
 classDiagram
     direction TB
+
+    class CategoryChooser {
+        -CategoryChooser()
+        +ask(Component, int, List~AgeCategory~, String)$ AgeCategory
+        -rangeText(List~Integer~)$ String
+        -escape(String)$ String
+    }
     class ModernComboBox {
         +ModernComboBox(String[])
+        +ModernComboBox(String[], function.UnaryOperator~String~)
     }
     class ModernComboBox_ModernUI {
         #createArrowButton() JButton
@@ -1295,10 +1567,15 @@ classDiagram
         #paintComponent(Graphics) void
     }
     class CardPanel {
+        -int SHADOW$
         +CardPanel(LayoutManager, int)
         #paintComponent(Graphics) void
     }
     class ClubLogo {
+        -Color NAVY$
+        -Color NAVY_DARK$
+        -Color SKY$
+        -Color ORANGE$
         +ClubLogo()
         #paintComponent(Graphics) void
         -inset(Shape, double, double, double)$ Shape
@@ -1307,7 +1584,7 @@ classDiagram
         -drawStar(Graphics2D, double, double, double)$ void
     }
     class CoachLabels {
-        <<utility>>
+        +String[] DISCIPLINES_ES$
         -CoachLabels()
         +disciplineValue(String)$ String
         +categoryLabel(CategoryEnum)$ String
@@ -1316,14 +1593,16 @@ classDiagram
     }
     class IconBadge {
         -VectorIcon icon
-        +IconBadge(VectorIcon.Type, Color, int)
+        -Color tint
+        +IconBadge(VectorIcon_Type, Color, int)
         #paintComponent(Graphics) void
     }
     class InputBox {
         -boolean focused
+        -JLabel iconLabel
         -VectorIcon icon
-        +InputBox(VectorIcon.Type, JComponent)
-        +setIcon(VectorIcon.Type) void
+        +InputBox(VectorIcon_Type, JComponent)
+        +setIcon(VectorIcon_Type) void
         -setFocused(boolean) void
         #paintComponent(Graphics) void
     }
@@ -1331,11 +1610,11 @@ classDiagram
         +LinkLabel(String, Runnable)
     }
     class ModernButton {
-        -Style style
+        -ModernButton_Style style
         -VectorIcon icon
         -boolean hover
         -boolean pressed
-        +ModernButton(String, VectorIcon.Type, Style, int)
+        +ModernButton(String, VectorIcon_Type, ModernButton_Style, int)
         #paintComponent(Graphics) void
     }
     class ModernButton_Style {
@@ -1345,7 +1624,8 @@ classDiagram
         DANGER
     }
     class ModernTable {
-        <<utility>>
+        -Color SELECTION_BG$
+        -Color GRID_COLOR$
         -ModernTable()
         +create(String[], int[], int[])$ JTable
         +setBadgeColumn(JTable, int, Map~String, Color[]~)$ void
@@ -1358,7 +1638,7 @@ classDiagram
         #paintComponent(Graphics) void
     }
     class Money {
-        <<utility>>
+        -Locale CO$
         -Money()
         +cop(double)$ String
     }
@@ -1374,36 +1654,39 @@ classDiagram
         #paintComponent(Graphics) void
     }
     class SearchText {
-        <<utility>>
         -SearchText()
         +normalize(String)$ String
         +contains(String, String)$ boolean
     }
     class ShareBar {
+        -Color color
         -double value
         +ShareBar(Color)
         +setValue(double) void
         #paintComponent(Graphics) void
     }
     class SidebarButton {
+        -Color TEXT_IDLE$
         -boolean active
         -boolean hover
         -VectorIcon icon
         +SidebarButton(String)
-        +SidebarButton(String, VectorIcon.Type)
-        -iconFor(String)$ VectorIcon.Type
+        +SidebarButton(String, VectorIcon_Type)
+        -iconFor(String)$ VectorIcon_Type
         +setActive(boolean) void
         #paintComponent(Graphics) void
     }
     class SpanishLabels {
-        <<utility>>
+        -Map~String, String~ MAP$
         -SpanishLabels()
+        +discipline(String)$ String
         +of(String)$ String
     }
     class VectorIcon {
-        -Type type
+        -VectorIcon_Type type
         -int size
-        +VectorIcon(Type, int, Color)
+        -Color color
+        +VectorIcon(VectorIcon_Type, int, Color)
         +setColor(Color) void
         +getIconWidth() int
         +getIconHeight() int
@@ -1454,6 +1737,7 @@ classDiagram
     SidebarButton --> VectorIcon
     ModernComboBox ..> VectorIcon : creates
     CoachLabels ..> SpanishLabels : uses
+    JComboBox <|-- CategoryChooser
 ```
 
 ## 7. Application entry point
@@ -1463,9 +1747,12 @@ Composition root: `Main` creates the repositories, services and frames and injec
 ```mermaid
 classDiagram
     direction TB
+
+
     class Main {
+        +Main()
         +main(String[])$ void
-        -showLogin(IAuthService, Supplier~PrincipalFrames~)$ void
+        -showLogin(IAuthService, function.Supplier~PrincipalFrames~)$ void
     }
 
     Main ..> FileAthleteRepository : creates
@@ -1486,4 +1773,37 @@ classDiagram
     Main ..> ICoachService : uses
     Main ..> IDisciplineService : uses
     Main ..> ISaleService : uses
+    Main ..> PostgresAthleteRepository : creates
+    Main ..> PostgresCategoryRepository : creates
+    Main ..> PostgresDisciplineRepository : creates
+    Main ..> CategoryService : creates
+    Main ..> DashboardService : creates
+    Main ..> HealthService : creates
+```
+
+## 8. Database connection (JDBC + HikariCP)
+
+The `conection` package supplies PostgreSQL connections to the three PostgreSQL repositories. Credentials come from an environment variable; no password is depicted.
+
+```mermaid
+classDiagram
+    direction TB
+    class conection {
+        -HikariDataSource dataSource$
+        -createDataSource()$ HikariDataSource
+        +conectar()$ Connection
+        +closePool()$ void
+    }
+    class TestConnection
+    class PostgresAthleteRepository
+    class PostgresCategoryRepository
+    class PostgresDisciplineRepository
+    class HikariDataSource {
+        <<external>>
+    }
+    conection --> HikariDataSource
+    PostgresAthleteRepository ..> conection
+    PostgresCategoryRepository ..> conection
+    PostgresDisciplineRepository ..> conection
+    TestConnection ..> conection
 ```
