@@ -6,12 +6,14 @@ import com.creatinaboys.model.Athlete;
 import com.creatinaboys.model.AthleteKey;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Reglas de unicidad del club:
  *  - Un documento solo puede estar una vez por disciplina.
  *  - Si el documento ya existe en otra disciplina, el nombre debe coincidir (es la misma persona).
- *  - El dorsal es único dentro de cada disciplina.
+ *  - El dorsal es único dentro de cada disciplina Y categoría: un adulto y un niño
+ *    (categorías distintas) pueden llevar el mismo número, aunque sean de la misma disciplina.
  */
 public class AthleteUniquenessPolicy {
 
@@ -38,15 +40,17 @@ public class AthleteUniquenessPolicy {
             }
         }
 
-        // 2) Dorsal único por disciplina
+        // 2) Dorsal único por disciplina y categoría
         for (Athlete a : existing) {
             if (a.getKey().equals(ignoreKey)) continue;
 
             if (a.getDiscipline().equals(candidate.getDiscipline())
+                    && Objects.equals(a.getCategoryName(), candidate.getCategoryName())
                     && a.getJerseyNumber() == candidate.getJerseyNumber()) {
                 throw new DuplicateDataException(DuplicateDataException.Field.JERSEY,
                         "El dorsal " + candidate.getJerseyNumber() + " ya está en uso en "
-                        + candidate.getDiscipline() + ". Elige otro número.");
+                        + candidate.getDiscipline() + " en la categoría "
+                        + candidate.getCategoryName() + ". Elige otro número.");
             }
         }
     }

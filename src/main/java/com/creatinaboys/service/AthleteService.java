@@ -49,11 +49,13 @@ public class AthleteService implements IAthlteService {
             DataValidator.parseHeight(String.valueOf(b.getHeight()));
         }
 
-        uniqueness.check(athlete, repository.findAll(), null);
-
+        // La categoría se asigna antes de revisar la unicidad: el dorsal se compara
+        // por disciplina y categoría.
         AgeCategory category = resolveCategory(athlete.getAge(), categoryName);
         athlete.setCategoryName(category.name());
         athlete.setMonthlyFee(category.monthlyFee().doubleValue());
+
+        uniqueness.check(athlete, repository.findAll(), null);
 
         return repository.save(athlete);
     }
@@ -99,8 +101,14 @@ public class AthleteService implements IAthlteService {
             candidate = new Footballer(target.getId(), newName, age, newPhone, jerseyNumber, newPosition);
         }
 
-        // Unicidad (dorsal por disciplina). Los otros registros de la misma persona se
-        // excluyen porque se renombran junto con este.
+        // La categoría solo se recalcula si cambió la edad; si no, se conserva la actual
+        // (y su tarifa), así editar un teléfono no reasigna a nadie de categoría.
+        boolean ageChanged = age != target.getAge();
+        AgeCategory newCategory = ageChanged ? resolveCategory(age, categoryName) : null;
+        candidate.setCategoryName(newCategory != null ? newCategory.name() : target.getCategoryName());
+
+        // Unicidad (dorsal por disciplina y categoría). Los otros registros de la misma
+        // persona se excluyen porque se renombran junto con este.
         List<Athlete> others = repository.findAll().stream()
                 .filter(a -> !a.getId().equals(target.getId()))
                 .toList();
@@ -120,11 +128,6 @@ public class AthleteService implements IAthlteService {
             mine = target;
             records.add(target);
         }
-
-        // La categoría solo se recalcula si cambió la edad; si no, se conserva la actual
-        // (y su tarifa), así editar un teléfono no reasigna a nadie de categoría.
-        boolean ageChanged = age != target.getAge();
-        AgeCategory newCategory = ageChanged ? resolveCategory(age, categoryName) : null;
 
         for (Athlete a : records) {
             a.setFullName(newName);
